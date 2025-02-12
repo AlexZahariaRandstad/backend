@@ -265,6 +265,8 @@ UTILS_OBJS_TEST = $(OBJ_DIR)/MemoryManager_test.o \
 
 OBJS_GENERATE_TEST = $(OBJ_DIR)/Logger_test.o \
                   	 $(OBJ_DIR)/GenerateFrames_test.o \
+					 $(OBJ_DIR)/NegativeResponse_test.o \
+					 $(OBJ_DIR)/SecurityAccess_test.o \
 					 $(OBJ_DIR)/Globals_test.o \
 					 $(OBJ_DIR)/TestUtils_test.o \
 					 $(OBJ_DIR)/CaptureFrame_test.o
@@ -360,6 +362,7 @@ OBJS_TRANSFERDATA_TEST = $(OBJ_DIR)/Logger_test.o \
 OBJS_NEGATIVERESPONSE_TEST = $(OBJ_DIR)/Logger_test.o \
                              $(OBJ_DIR)/GenerateFrames_test.o \
                              $(OBJ_DIR)/NegativeResponse_test.o \
+							 $(OBJ_DIR)/SecurityAccess_test.o \
 							 $(OBJ_DIR)/Globals_test.o \
 							 $(OBJ_DIR)/TestUtils_test.o \
 							 $(OBJ_DIR)/CaptureFrame_test.o
