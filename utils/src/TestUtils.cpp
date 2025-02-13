@@ -33,6 +33,20 @@ void testFrames(struct can_frame expected_frame, CaptureFrame captured_frame){
     testFrames(expected_frame, captured_frame.frame);
 }
 
+void v_printDebugFrame(std::string frameName, struct can_frame frame){
+    std::cout<<frameName<<" can_id: "<<static_cast<int>(frame.can_id)<<'\n';
+    std::cout<<frameName<<" can_dlc: "<<static_cast<int>(frame.can_dlc)<<'\n';
+    std::cout<<frameName<<" data: { ";
+    for (const auto& elem: frame.data){
+        std::cout<<static_cast<int>(elem)<<' ';
+    }
+    std::cout<<"}\n";
+}
+
+void v_printDebugFrame(std::string frameName, CaptureFrame frame){
+    v_printDebugFrame(frameName, frame.frame);
+}
+
 struct can_frame createFrame(int id, std::vector<uint8_t> data, FrameType frameType)
 {
     struct can_frame frame;
