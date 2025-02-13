@@ -53,10 +53,10 @@ protected:
 
 canid_t extractCANID(const std::string& input)
 {
-    std::istringstream iss(input);
+    std::istringstream iss_StrLine(input);
     std::string line;
     
-    while (std::getline(iss, line))
+    while (std::getline(iss_StrLine, line))
     {
         if (line.find("Module ID:") != std::string::npos)
         {
@@ -70,10 +70,10 @@ canid_t extractCANID(const std::string& input)
 
 uint8_t extractDataLength(const std::string& input)
 {
-    std::istringstream iss(input);
+    std::istringstream iss_StrLine(input);
     std::string line;
     const std::string searchedStr = "Data Length:";
-    while (std::getline(iss, line)) {
+    while (std::getline(iss_StrLine, line)) {
         if (line.find(searchedStr) != std::string::npos)
         {
             size_t pos = line.find("Data Length:");
@@ -86,11 +86,11 @@ uint8_t extractDataLength(const std::string& input)
 
 std::vector<uint8_t> extractData(const std::string& input) {
     std::vector<uint8_t> data;
-    std::istringstream iss(input);
+    std::istringstream iss_StrLine(input);
     std::string line;
     const std::string searchedStr = "Data:";
     
-    while (std::getline(iss, line)) {
+    while (std::getline(iss_StrLine, line)) {
         if (line.find(searchedStr) != std::string::npos) {
             size_t pos = line.find(searchedStr);
             std::string dataStr = line.substr(pos + searchedStr.size());

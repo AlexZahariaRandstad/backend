@@ -6,6 +6,26 @@
 #include "FileManager.h"
 #include "Globals.h"
 
+std::unordered_map<uint16_t, std::string> FileManager::getExistingDIDValues(const std::string& strFilePath) {
+    std::unordered_map<uint16_t, std::string> mapU16Str_ExistingValues;
+    std::ifstream ifs_Infile(strFilePath);
+    std::string strLine;
+
+    while (std::getline(ifs_Infile, strLine)) {
+        std::istringstream iss_StrLine(strLine);
+        uint16_t u16Did;
+        std::string strData;
+
+        if (iss_StrLine >> std::hex >> u16Did) {
+            std::getline(iss_StrLine >> std::ws, strData);
+            mapU16Str_ExistingValues[u16Did] = strData;
+        }
+    }
+    ifs_Infile.close();
+
+    return mapU16Str_ExistingValues;
+}
+
 void FileManager::writeMapToFile(const std::string& file_name, const std::unordered_map<uint16_t, std::vector<uint8_t>>& data_map)
 {
     /* Open in truncate mode to overwrite the file */

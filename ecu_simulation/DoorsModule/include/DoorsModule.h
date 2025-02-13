@@ -45,7 +45,7 @@ public:
      * @brief Destructor Doors Module object.
      */
     virtual ~DoorsModule();
-       
+
     /**
      * @brief Function to fetch data from system about doors.
      */

@@ -32,6 +32,8 @@ std::unordered_map<uint16_t, std::vector<uint8_t>> EngineModule::default_DID_eng
         {0x0130, {0}},
         /* Mass air flow sensor */
         {0x0134, {0}},
+        /* Flag indicating if rollback is available */
+        {ROLLBACK_AVAILABLE_DID, {0}}, 
         /* OTA Status */
         {OTA_UPDATE_STATUS_DID, {0}},
 #ifdef SOFTWARE_VERSION
@@ -44,6 +46,7 @@ const std::vector<uint16_t> EngineModule::writable_Engine_DID =
 {
     /* Throttle Position */
      0x0110,
+    ROLLBACK_AVAILABLE_DID,
     OTA_UPDATE_STATUS_DID,
     SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID
 };
@@ -68,7 +71,7 @@ EngineModule::~EngineModule()
 void EngineModule::fetchEngineData()
 {
     /* Path to engine data file */
-    std::string file_path = "engine_data.txt";
+    std::string strFilePath = "engine_data.txt";
 
     /* Generate random values for each DID */
     std::unordered_map<uint16_t, std::string> updated_values;
@@ -76,26 +79,36 @@ void EngineModule::fetchEngineData()
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(0, 255);
 
-    for (auto& [did, data] : default_DID_engine)
+    /* Retrieve existing values from the file */
+    std::unordered_map<uint16_t, std::string> mapU16Str_ExistingValues = FileManager::getExistingDIDValues(strFilePath);
+
+    for (auto& [u16Did, data] : default_DID_engine)
     {
-        std::stringstream data_ss;
-        for (auto& byte : data)
+        if (mapU16Str_ExistingValues.find(u16Did) != mapU16Str_ExistingValues.end() && u16Did == ROLLBACK_AVAILABLE_DID) 
         {
-            if(did != SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID && did != OTA_UPDATE_STATUS_DID)
-            {
-                byte = dist(gen);  
-            }
-            /* Generate a random value between 0 and 255 */
-            data_ss << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << static_cast<int>(byte) << " ";
+            updated_values[u16Did] = mapU16Str_ExistingValues[u16Did];
         }
-        updated_values[did] = data_ss.str();
+        else 
+        {
+            std::stringstream sstrData;
+            for (auto& byte : data)
+            {
+                if (u16Did != SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID && u16Did != OTA_UPDATE_STATUS_DID)
+                {
+                    byte = dist(gen);
+                }
+                /* Generate a random value between 0 and 255 */
+                sstrData << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << static_cast<int>(byte) << " ";
+            }
+            updated_values[u16Did] = sstrData.str();
+        }
     }
 
     /* Read the current file contents into memory */
-    std::ifstream infile(file_path);
+    std::ifstream ifs_Infile(strFilePath);
     std::stringstream buffer;
-    buffer << infile.rdbuf();
-    infile.close();
+    buffer << ifs_Infile.rdbuf();
+    ifs_Infile.close();
 
     std::string file_contents = buffer.str();
     std::istringstream file_stream(file_contents);
@@ -118,7 +131,7 @@ void EngineModule::fetchEngineData()
     }
 
     /* Write the updated contents back to the file */
-    std::ofstream outfile(file_path);
+    std::ofstream outfile(strFilePath);
     outfile << updated_file_contents;
     outfile.close();
 
@@ -132,61 +145,74 @@ int EngineModule::getEngineSocket() const
 
 void EngineModule::writeDataToFile()
 {
+    std::string strFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/engine_data.txt";
+
+    /* Retrieve existing values before overwriting the file */
+    std::unordered_map<uint16_t, std::string> mapU16Str_ExistingValues = FileManager::getExistingDIDValues(strFilePath);
+
     /* Insert the default DID values in the file */
-    std::ofstream outfile("engine_data.txt");
+    std::ofstream outfile(strFilePath);
     if (!outfile.is_open())
     {
         throw std::runtime_error("Failed to open file: engine_data.txt");
     }
 
     /* Check if old_engine_data.txt exists */
-    std::string old_file_path = "old_engine_data.txt";
-    std::ifstream infile(old_file_path);
+    std::string strOldFilePath = "old_engine_data.txt";
+    std::ifstream ifs_Infile(strOldFilePath);
 
-    if (infile.is_open())
+    if (ifs_Infile.is_open())
     {
         /* Read the current file contents into memory */
         std::stringstream buffer;
         /* Read the entire file into the buffer */
-        buffer << infile.rdbuf();
-        infile.close();
+        buffer << ifs_Infile.rdbuf();
+        ifs_Infile.close();
 
         /* Store the original content */
         std::string original_file_contents = buffer.str();
 
-        /* Write the content of old_mcu_data.txt into mcu_data.txt */
+        /* Write the content of old_engine_data.txt into engine_data.txt */
         outfile << original_file_contents;
 
         /* Delete the old file after reading its contents */
-        std::remove(old_file_path.c_str());
-        outfile.close();
+        std::remove(strOldFilePath.c_str());
     }
     else
     {
-        for (const auto& [data_identifier, data] : default_DID_engine)
+        /* Write default DID values to engine_data.txt, keeping ROLLBACK_AVAILABLE_DID */
+        for (const auto& [u16DataIdentifier, data] : default_DID_engine)
         {
-            outfile << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << data_identifier << " ";
-            for (uint8_t byte : data)
+            outfile << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << u16DataIdentifier << " ";
+
+            if (u16DataIdentifier == ROLLBACK_AVAILABLE_DID && mapU16Str_ExistingValues.find(u16DataIdentifier) != mapU16Str_ExistingValues.end())
             {
-                outfile << std::hex << std::setw(1) << std::setfill('0') << static_cast<int>(byte) << " ";
+                outfile << mapU16Str_ExistingValues[u16DataIdentifier] << "\n";
             }
-            outfile << "\n";
+            else
+            {
+                for (uint8_t byte : data)
+                {
+                    outfile << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+                }
+                outfile << "\n";
+            }
         }
-        outfile.close();
-        fetchEngineData();
     }
+    outfile.close();
+    fetchEngineData();
 }
 
 void EngineModule::checkDTC()
 {      
     /* Check if dtcs.txt exists */
-    std::string dtc_file_path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/dtcs.txt";
-    std::string engine_file_path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/engine_data.txt";
-    std::ifstream infile(dtc_file_path);
+    std::string strDtcFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/dtcs.txt";
+    std::string strEngineFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/engine_data.txt";
+    std::ifstream ifs_Infile(strDtcFilePath);
 
-    if (!infile.is_open())
+    if (!ifs_Infile.is_open())
     {
-        std::ofstream outfile(dtc_file_path);
+        std::ofstream outfile(strDtcFilePath);
         if (outfile.is_open())
         {
             LOG_INFO(engineModuleLogger->GET_LOGGER(), "dtcs.txt file created successfully.");
@@ -200,18 +226,18 @@ void EngineModule::checkDTC()
     }
     else
     {
-        infile.close();
+        ifs_Infile.close();
     }
     /* Read the map with DIDs from the file */
-    std::unordered_map<uint16_t, std::vector<uint8_t>> current_DID_value = FileManager::readMapFromFile(engine_file_path);
+    std::unordered_map<uint16_t, std::vector<uint8_t>> current_DID_value = FileManager::readMapFromFile(strEngineFilePath);
 
     /* Fuel Pressure DTC*/
-    FileManager::writeDTC(current_DID_value, dtc_file_path, 0x012C, 30, 50, "P0190 24");
+    FileManager::writeDTC(current_DID_value, strDtcFilePath, 0x012C, 30, 50, "P0190 24");
     /* Oil Temperature DTC */
-    FileManager::writeDTC(current_DID_value, dtc_file_path, 0x0124, 230, 260, "P0196 24");
+    FileManager::writeDTC(current_DID_value, strDtcFilePath, 0x0124, 230, 260, "P0196 24");
     /* Engine Load DTC*/
-    FileManager::writeDTC(current_DID_value, dtc_file_path, 0x011C, 0, 85, "P0069 24");
+    FileManager::writeDTC(current_DID_value, strDtcFilePath, 0x011C, 0, 85, "P0069 24");
     /* Engine Coolant Temperature DTC */
-    FileManager::writeDTC(current_DID_value, dtc_file_path, 0x010C, 90, 105, "P0115 24");
+    FileManager::writeDTC(current_DID_value, strDtcFilePath, 0x010C, 90, 105, "P0115 24");
 }
 
