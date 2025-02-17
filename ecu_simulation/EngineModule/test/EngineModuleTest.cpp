@@ -9,6 +9,7 @@ struct EngineModuleTest : testing::Test
     EngineModule* engine;
     EngineModuleTest()
     {
+        v_loadProjectPath();
         engine = new EngineModule();
     }
     ~EngineModuleTest()
@@ -26,7 +27,7 @@ TEST_F(EngineModuleTest, EngineSocket)
 
 TEST_F(EngineModuleTest, CheckOldDataFile)
 {
-    std::ofstream outfile("old_engine_data.txt");
+    std::ofstream outfile(std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/old_engine_data.txt");
     engine->writeDataToFile();
     outfile.close();
 }
@@ -60,14 +61,14 @@ TEST_F(EngineModuleTest, checkDTCCreateFileSuccessfully)
 
 TEST_F(EngineModuleTest, BatteryDataFailed)
 {
-    std::string path = "engine_data.txt";
+    std::string path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/engine_data.txt";
     std::ofstream outfile(path);
     chmod(path.c_str(), 0);
     EXPECT_THROW(
     {
         engine->writeDataToFile();
     }, std::runtime_error);
-    path = "engine_data.txt";
+    path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/engine_data.txt";
     chmod(path.c_str(), 0666);
     outfile.close();
 }
