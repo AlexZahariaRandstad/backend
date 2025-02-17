@@ -1,29 +1,25 @@
 #include "Globals.h"
+#include <filesystem>
 #include <fstream>
 #include <stdexcept>
 #include <algorithm>
+#include <string>
 
 std::string PROJECT_PATH;
 
-void loadProjectPathForMCU() {
-    std::ifstream file("../config/config.ini");
-    if (!file.is_open()) {
-        throw std::runtime_error("Could not open config.ini");
+void v_loadProjectPath() {
+    std::filesystem::path configIniFilePath = std::filesystem::current_path().remove_filename();
+    while (!configIniFilePath.empty() && configIniFilePath.filename().string() != std::string("backend")){
+        configIniFilePath = configIniFilePath.parent_path();
     }
 
-    std::string line, key = "PROJECT_PATH=";
-    while (std::getline(file, line)) {
-        if (line.rfind(key, 0) == 0) {
-            PROJECT_PATH = line.substr(key.size());
-            return;
-        }
+    // Sanity check, ensure that backend was found
+    if (configIniFilePath.empty()){
+        throw std::runtime_error("Root directory reached when loading project path. Check that this function was called from a file inside Poc/src/backend or any of its subdirectories");
     }
 
-    throw std::runtime_error("PROJECT_PATH not found in config.ini");
-}
-
-void loadProjectPathForECU() {
-    std::ifstream file("../../config/config.ini");
+    configIniFilePath /= "config/config.ini";
+    std::ifstream file(configIniFilePath.c_str());
     if (!file.is_open()) {
         throw std::runtime_error("Could not open config.ini");
     }
