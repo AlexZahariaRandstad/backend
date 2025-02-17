@@ -190,7 +190,7 @@ void BatteryModule::parseBatteryInfo(const std::string &data, float &energy, flo
     }
 
     /* Path to battery data file */
-    std::string strFilePath = "battery_data.txt";
+    std::string strFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/battery_data.txt";
 
     /* Read the current file contents into memory */
     std::ifstream ifs_Infile(strFilePath);
@@ -299,7 +299,7 @@ void BatteryModule::writeDataToFile()
     }
 
     /* Check if old_battery_data.txt exists */
-    std::string strOldFilePath = "old_battery_data.txt";
+    std::string strOldFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/old_battery_data.txt";
     std::ifstream ifs_Infile(strOldFilePath);
 
     if (ifs_Infile.is_open())

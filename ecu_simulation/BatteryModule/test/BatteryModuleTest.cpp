@@ -10,6 +10,7 @@ struct BatteryModuleTest : testing::Test
     BatteryModule* battery;
     BatteryModuleTest()
     {
+        v_loadProjectPath();
         battery = new BatteryModule();
     }
     ~BatteryModuleTest()
@@ -25,13 +26,13 @@ TEST_F(BatteryModuleTest, ExecFunctionThrow)
 
 TEST_F(BatteryModuleTest, ParseBatteryInfo)
 {
-    auto data_map = FileManager::readMapFromFile("battery_data.txt");
+    auto data_map = FileManager::readMapFromFile(std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/battery_data.txt");
     std::vector<uint8_t> response = data_map[0x01A0];
 
     std::ostringstream oss;
     for (uint8_t byte : response)
     {
-        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+        oss << static_cast<int>(byte);
     }
     std::string result = oss.str();
     std::string energy_fetch = std::to_string(static_cast<uint8_t>(battery->getEnergy()));
@@ -42,7 +43,7 @@ TEST_F(BatteryModuleTest, ParseBatteryInfo)
     response = data_map[0x01B0];
     for (uint8_t byte : response)
     {
-        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+        oss << static_cast<int>(byte);
     }
     result = oss.str();
     std::string voltage_fetch = std::to_string(static_cast<uint8_t>(battery->getVoltage()));
@@ -143,7 +144,7 @@ TEST_F(BatteryModuleTest, CheckPendingDischargeState)
 
 TEST_F(BatteryModuleTest, CheckOldDataFile)
 {
-    std::ofstream outfile("old_battery_data.txt");
+    std::ofstream outfile(std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/old_battery_data.txt");
     battery->writeDataToFile();
     outfile.close();
 }
@@ -176,14 +177,14 @@ TEST_F(BatteryModuleTest, checkDTCCreateFileSuccessfully)
 }
 TEST_F(BatteryModuleTest, BatteryDataFailed)
 {
-    std::string path = "battery_data.txt";
+    std::string path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/battery_data.txt";
     std::ofstream outfile(path);
     chmod(path.c_str(), 0);
     EXPECT_THROW(
     {
         battery->writeDataToFile();
     }, std::runtime_error);
-    path = "battery_data.txt";
+    path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/battery_data.txt";
     chmod(path.c_str(), 0666);
     outfile.close();
 }
