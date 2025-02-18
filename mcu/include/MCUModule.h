@@ -108,6 +108,7 @@ namespace MCU
          * 
          */
         void checkSwVersion();
+
         /**
          * @brief This function generates random values for all DID entries defined in the default_DID_MCU map
          * 

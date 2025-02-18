@@ -36,6 +36,14 @@ class FileManager
 {
 public:
     /**
+     * @brief Method used for retrieving existing DID values from a file.
+     *
+     * @param strFilePath The path to the file containing the DID values.
+     * @return std::unordered_map<uint16_t, std::string> A map containing the extracted DID values.
+     */
+    static std::unordered_map<uint16_t, std::string> getExistingDIDValues(const std::string& strFilePath);
+
+    /**
      * @brief Method used for writing a map to a file
      * 
      * @param file_name 

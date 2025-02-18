@@ -6,6 +6,8 @@
 #include "DoorsModule.h"
 #include "DoorsModuleLogger.h"
 #include "RequestUpdateStatus.h"
+#include "Globals.h"
+#include "FileManager.h"
 
 Logger* doorsModuleLogger = nullptr;
 DoorsModule* doors = nullptr;
@@ -17,6 +19,7 @@ std::unordered_map<uint16_t, std::vector<uint8_t>> DoorsModule::default_DID_door
         {0x03D0, {0}},  /* Door Passenger Locked Status*/
         {0x03E0, {0}},   /* Ajar Warning Status */
         {OTA_UPDATE_STATUS_DID, {0}},   /* OTA Status */
+        {ROLLBACK_AVAILABLE_DID, {0}}, /* Flag indicating if rollback is available */
 #ifdef SOFTWARE_VERSION
         {SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID, {static_cast<uint8_t>(SOFTWARE_VERSION)}}
 #else
@@ -29,6 +32,7 @@ const std::vector<uint16_t> DoorsModule::writable_Doors_DID =
      0x03C0,
      /* represents Door Passenger Locked Status (0:unlocked; 1:locked) */
     0x03D0,
+    ROLLBACK_AVAILABLE_DID,
     OTA_UPDATE_STATUS_DID,
     SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID
 };
@@ -52,35 +56,45 @@ DoorsModule::~DoorsModule()
 /* Function to fetch data with simulated door data */
 void DoorsModule::fetchDoorsData()
 {    
+    /* Path to doors data file */
+    std::string strFilePath = "doors_data.txt";
+
     /* Generate random values for each DID */
     std::unordered_map<uint16_t, std::string> updated_values;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(0, 1);
 
-    for (auto& [did, data] : default_DID_doors)
+    /* Retrieve existing values from the file */
+    std::unordered_map<uint16_t, std::string> mapU16Str_ExistingValues = FileManager::getExistingDIDValues(strFilePath);
+
+    for(auto& [u16Did, data] : default_DID_doors)
     {
-        std::stringstream data_ss;
-        for (auto& byte : data)
+        if(mapU16Str_ExistingValues.find(u16Did) != mapU16Str_ExistingValues.end() && u16Did == ROLLBACK_AVAILABLE_DID) 
         {
-            if(did != SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID && did != OTA_UPDATE_STATUS_DID)
-            {
-                /* Generate a random value between 0 and 1: doors status - 0:closed; 1:open; doors lock status - 0:unlocked; 1:locked; ajar warning - 0:no warning; 1: warning */
-                byte = dist(gen);
-            }
-            data_ss << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << static_cast<int>(byte) << " ";
+            updated_values[u16Did] = mapU16Str_ExistingValues[u16Did];
         }
-        updated_values[did] = data_ss.str();
+        else 
+        {
+            std::stringstream sstrData;
+            for(auto& byte : data)
+            {
+                if(u16Did != SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID && u16Did != OTA_UPDATE_STATUS_DID)
+                {
+                    /* Generate a random value between 0 and 1: doors status - 0:closed; 1:open; doors lock status - 0:unlocked; 1:locked; ajar warning - 0:no warning; 1: warning */
+                    byte = dist(gen);
+                }
+                sstrData << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << static_cast<int>(byte) << " ";
+            }
+            updated_values[u16Did] = sstrData.str();
+        }
     }
 
-    /* Path to engine data file */
-    std::string file_path = "doors_data.txt";
-
     /* Read the current file contents into memory */
-    std::ifstream infile(file_path);
+    std::ifstream ifs_Infile(strFilePath);
     std::stringstream buffer;
-    buffer << infile.rdbuf();
-    infile.close();
+    buffer << ifs_Infile.rdbuf();
+    ifs_Infile.close();
 
     std::string file_contents = buffer.str();
     std::istringstream file_stream(file_contents);
@@ -103,7 +117,7 @@ void DoorsModule::fetchDoorsData()
     }
 
     /* Write the updated contents back to the file */
-    std::ofstream outfile(file_path);
+    std::ofstream outfile(strFilePath);
     outfile << updated_file_contents;
     outfile.close();
 
@@ -117,47 +131,60 @@ int DoorsModule::getDoorsSocket() const
 
 void DoorsModule::writeDataToFile()
 {
+    std::string strFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/DoorsModule/doors_data.txt";
+
+    /* Retrieve existing values before overwriting the file */
+    std::unordered_map<uint16_t, std::string> mapU16Str_ExistingValues = FileManager::getExistingDIDValues(strFilePath);
+
     /* Insert the default DID values in the file */
-    std::ofstream outfile("doors_data.txt");
+    std::ofstream outfile(strFilePath);
     if (!outfile.is_open())
     {
         throw std::runtime_error("Failed to open file: doors_data.txt");
     }
 
     /* Check if old_doors_data.txt exists */
-    std::string old_file_path = "old_doors_data.txt";
-    std::ifstream infile(old_file_path);
+    std::string strOldFilePath = "old_doors_data.txt";
+    std::ifstream ifs_Infile(strOldFilePath);
 
-    if (infile.is_open())
+    if (ifs_Infile.is_open())
     {
         /* Read the current file contents into memory */
         std::stringstream buffer;
         /* Read the entire file into the buffer */
-        buffer << infile.rdbuf();
-        infile.close();
+        buffer << ifs_Infile.rdbuf();
+        ifs_Infile.close();
 
         /* Store the original content */
         std::string original_file_contents = buffer.str();
 
-        /* Write the content of old_mcu_data.txt into mcu_data.txt */
+        /* Write the content of old_doors_data.txt into doors_data.txt */
         outfile << original_file_contents;
 
         /* Delete the old file after reading its contents */
-        std::remove(old_file_path.c_str());
-        outfile.close();
+        std::remove(strOldFilePath.c_str());
     }
     else
     {
-        for (const auto& [data_identifier, data] : default_DID_doors)
+        /* Write default DID values to doors_data.txt, keeping ROLLBACK_AVAILABLE_DID */
+        for (const auto& [u16DataIdentifier, data] : default_DID_doors)
         {
-            outfile << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << data_identifier << " ";
-            for (uint8_t byte : data)
+            outfile << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << u16DataIdentifier << " ";
+
+            if (u16DataIdentifier == ROLLBACK_AVAILABLE_DID && mapU16Str_ExistingValues.find(u16DataIdentifier) != mapU16Str_ExistingValues.end())
             {
-                outfile << std::hex << std::setw(1) << std::setfill('0') << static_cast<int>(byte) << " ";
+                outfile << mapU16Str_ExistingValues[u16DataIdentifier] << "\n";
             }
-            outfile << "\n";
+            else
+            {
+                for (uint8_t byte : data)
+                {
+                    outfile << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+                }
+                outfile << "\n";
+            }
         }
-        outfile.close();
-        fetchDoorsData();
     }
+    outfile.close();
+    fetchDoorsData();
 }
