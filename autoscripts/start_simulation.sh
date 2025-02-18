@@ -12,10 +12,12 @@ source venv/bin/activate &&
 echo "Activated Python virtual environment" &&
 pip install -r requirements.txt &&
 echo "Installed Python packages" &&
-python3.8 app.py &
+cd ../autoscripts &&
+sudo ./create_sd_card.sh --only-sdcard &&
+cd ../rest_api &&
+flask run &
 sleep 5  # Wait for the server to start
 while ! curl -sSf http://127.0.0.1:5000 > /dev/null; do
-    echo "Waiting for the server to start..."
     sleep 1
 done
 xdg-open http://127.0.0.1:5000 &&
@@ -27,35 +29,82 @@ exec bash
 mcu_command='
 cd ../mcu &&
 echo "Navigated to ../mcu" &&
+mkdir -p logs &&
 {
     sudo apt install -y build-essential &&
     echo "Installed build-essential" &&
     make clean &&
     echo "Cleaned the MCUModule build" &&
     make &&
-    echo "Compiled the MCU application" &&
-    ./main_mcu &&
-    echo "Ran the MCU application"
-} 2>&1 | tee mcu_log.txt &&
-exec bash
+    echo "Compiled the MCU application"
+} 2>&1 | tee logs/mcu_log.txt &&
+echo "Running MCU application..." &&
+exec ./main_mcu
 '
 
 # Define the commands for the BatteryModule terminal
 battery_module_command='
 cd ../ecu_simulation/BatteryModule &&
 echo "Navigated to ../ecu_simulation/BatteryModule" &&
-make clean &&
-echo "Cleaned the BatteryModule build" &&
-make &&
-echo "Compiled the BatteryModule application" &&
-./main_battery &&
+mkdir -p logs &&
+{
+    make clean &&
+    echo "Cleaned the BatteryModule build" &&
+    make &&
+    echo "Compiled the BatteryModule application"
+} 2>&1 | tee logs/script_battery_log.txt &&
 echo "Ran the BatteryModule application" &&
-exec bash
+exec ./main_battery
+'
+
+# Define the commands for the EngineModule terminal
+engine_module_command='
+cd ../ecu_simulation/EngineModule &&
+echo "Navigated to ../ecu_simulation/EngineModule" &&
+mkdir -p logs &&
+{
+    make clean &&
+    echo "Cleaned the EngineModule build" &&
+    make &&
+    echo "Compiled the EngineModule application"
+} 2>&1 | tee logs/script_engine_log.txt &&
+echo "Ran the EngineModule application" &&
+exec ./main_engine
+'
+
+# Define the commands for the DoorsModule terminal
+doors_module_command='
+cd ../ecu_simulation/DoorsModule &&
+echo "Navigated to ../ecu_simulation/DoorsModule" &&
+mkdir -p logs &&
+{
+    make clean &&
+    echo "Cleaned the DoorsModule build" &&
+    make &&
+    echo "Compiled the DoorsModule application"
+} 2>&1 | tee logs/script_doors_log.txt &&
+echo "Ran the DoorsModule application" &&
+exec ./main_doors
+'
+
+# Define the commands for the HVACModule terminal
+hvac_module_command='
+cd ../ecu_simulation/HVACModule &&
+echo "Navigated to ../ecu_simulation/HVACModule" &&
+mkdir -p logs &&
+{
+    make clean &&
+    echo "Cleaned the HVACModule build" &&
+    make &&
+    echo "Compiled the HVACModule application"
+} 2>&1 | tee logs/script_hvac_log.txt &&
+echo "Ran the HVACModule application" &&
+exec ./main_hvac
 '
 
 # Define the commands for the Front End terminal
 front_end_command='
-cd ../front_end/carsdata &&
+cd ../../front_end/carsdata &&
 echo "Navigated to ../front_end/carsdata" &&
 
 # Check if npm is installed
@@ -135,7 +184,6 @@ sleep 5
 
 # Check if the server is running
 while ! curl -sSf http://localhost:3000 > /dev/null; do
-    echo "Waiting for the server to start..."
     sleep 1
 done
 
@@ -188,13 +236,36 @@ echo "Starting REST API job..."
 # Run the MCU job in its own terminal
 echo "Starting MCU job..."
 (
+    sleep 10
     run_in_terminal "$mcu_command" "${terminals[@]}"
 ) &
 
 # Run the BatteryModule job in its own terminal
 echo "Starting BatteryModule job..."
 (
-    run_in_terminal "$battery_module_command" "${terminals[@]}"
+    sleep 60
+    run_in_terminal "$battery_module_command" "${terminals[@]}"&
+) &
+
+# Run the EngineModule job in its own terminal
+echo "Starting EngineModule job..."
+(   
+    sleep 60
+    run_in_terminal "$engine_module_command" "${terminals[@]}"
+) &
+
+# Run the DoorsModule job in its own terminal
+echo "Starting DoorsModule job..."
+(
+    sleep 60
+    run_in_terminal "$doors_module_command" "${terminals[@]}"
+) &
+
+# Run the HVACModule job in its own terminal
+echo "Starting HVACModule job..."
+(
+    sleep 60
+    run_in_terminal "$hvac_module_command" "${terminals[@]}"
 ) &
 
 # Run the Front End job in its own terminal

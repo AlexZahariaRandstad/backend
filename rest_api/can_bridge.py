@@ -28,6 +28,7 @@ class CanBridge:
         """Initialize the CAN bus based on the configuration."""
         if self.bus is None:
             try:
+                self.setup_vcan_interface()
                 self.bus = can.interface.Bus(
                     channel=self.CAN_INTERFACE, bustype='socketcan')
             except Exception as e:
