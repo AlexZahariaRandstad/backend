@@ -47,6 +47,7 @@ class ReadDTC
          */
         void read_dtc(int id, std::vector<uint8_t> data);
 
+
     private:
         /**
          * @brief method for 0x01 sub-function. Count the DTC. Send a frame

@@ -28,6 +28,11 @@
 #include <gtest/gtest.h>
 #include <net/if.h>
 #include "Globals.h"
+#include <fstream>
+#include <filesystem>
+#include <iostream>
+#include "FileManager.h"
+#include "FileGuard.h"
 
 int socket_;
 int socket2_;
@@ -40,6 +45,7 @@ struct ReadDtcTest : testing::Test
     Logger* logger;
     ReadDtcTest()
     {
+        v_loadProjectPath();
         std::string dtc_file_path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/dtcs.txt";
         logger = new Logger("log_test_read_dtc","./log_test_read_dtc.log");
         r = new ReadDTC(*logger, dtc_file_path,socket2_);
@@ -50,10 +56,23 @@ struct ReadDtcTest : testing::Test
         delete r;
         delete c1;
     }
+
+
 };
 
 TEST_F(ReadDtcTest, IncorrectMessageLength)
 {
+    std::string strPathDummy = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/DummyDtcs.txt";
+    const std::map<std::string, std::vector<uint16_t>> mapStrVecU16_DtcValues = {
+        {"P0190", {0x24}},
+        {"P0196", {0x24}},
+        {"P0069", {0x24}},
+        {"P0115", {0x24}}
+    };
+    // Instantiate the guard to ensure file deletion on scope exit
+    FileGuard fileGuard(strPathDummy);
+    v_CreateDummyDtcFile(strPathDummy, mapStrVecU16_DtcValues);
+    r = new ReadDTC(*logger, strPathDummy,socket2_);
     struct can_frame result_frame = createFrame(0x12fa, {0x03, 0x7F, 0x19, 0x13});
 
     r->read_dtc(0xfa12, {0x03, 0x19, 0x01});
@@ -61,30 +80,10 @@ TEST_F(ReadDtcTest, IncorrectMessageLength)
     testFrames(result_frame, *c1);
 }
 
-TEST_F(ReadDtcTest, SubFunction1)
-{
-    struct can_frame result_frame = createFrame(0x12fa, {0x06, 0x59, 0x01, 0x24, 0x01, 0x00, 0x02});
-
-    r->read_dtc(0xfa12, {0x4,0x19,0x01, 0xff});
-    c1->capture();
-    testFrames(result_frame, *c1);
-}
-
-TEST_F(ReadDtcTest, SubFunction2)
-{
-    struct can_frame result_frame = createFrame(0x10fa, {0x010, 0x09, 0x59, 0x02, 0x24, 0x01, 0x90, 0x24});
-    r->read_dtc(0xfa10, {0x4,0x19,0x02, 0xff});
-    /* First frame */
-    c1->capture();
-    testFrames(result_frame, *c1);
-
-    result_frame = createFrame(0x10fa, {0x21, 0x01, 0x96, 0x24});
-    c1->capture();
-    testFrames(result_frame, *c1);
-}
-
 TEST_F(ReadDtcTest, SubfunctionNotSupported)
 {
+    std::string strPathDtcs = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/dtcs.txt";
+    r = new ReadDTC(*logger, strPathDtcs,socket2_);
     struct can_frame result_frame = createFrame(0x12fa, {0x03, 0x7F, 0x19, 0x12});
 
     r->read_dtc(0xfa12, {0x4,0x19,0x03, 0xff});
@@ -121,6 +120,50 @@ TEST_F(ReadDtcTest, NoDtcFound)
     struct can_frame result_frame = createFrame(0x12fa, {0x03, 0x59, 0x02, 0x00});
 
     r->read_dtc(0xfa12, {0x4,0x19,0x02, 0xff});
+    c1->capture();
+    testFrames(result_frame, *c1);
+}
+
+TEST_F(ReadDtcTest, SubFunction1)
+{
+    std::string strPathDummy = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/DummyDtcs.txt";
+    const std::map<std::string, std::vector<uint16_t>> mapStrVecU16_DtcValues = {
+        {"P0190", {0x24}},
+        {"P0196", {0x24}},
+        {"P0069", {0x24}},
+        {"P0115", {0x24}}
+    };
+    // Instantiate the guard to ensure file deletion on scope exit
+    FileGuard fileGuard(strPathDummy);
+    v_CreateDummyDtcFile(strPathDummy, mapStrVecU16_DtcValues);
+    r = new ReadDTC(*logger, strPathDummy,socket2_);
+    struct can_frame result_frame = createFrame(0x12fa, {0x06, 0x59, 0x01, 0x24, 0x01, 0x00, 0x04});
+
+    r->read_dtc(0xfa12, {0x4,0x19,0x01, 0xff});
+    c1->capture();
+    testFrames(result_frame, *c1);
+}
+
+TEST_F(ReadDtcTest, SubFunction2)
+{
+    std::string strPathDummy = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/DummyDtcs.txt";
+    const std::map<std::string, std::vector<uint16_t>> mapStrVecU16_DtcValues = {
+        {"P0190", {0x24}},
+        {"P0196", {0x24}},
+        {"P0069", {0x24}},
+        {"P0115", {0x24}}
+    };
+    // Instantiate the guard to ensure file deletion on scope exit
+    FileGuard fileGuard(strPathDummy);
+    v_CreateDummyDtcFile(strPathDummy, mapStrVecU16_DtcValues);
+    r = new ReadDTC(*logger, strPathDummy,socket2_);
+    struct can_frame result_frame = createFrame(0x10fa, {0x010, 0x0f, 0x59, 0x02, 0x24, 0x00, 0x69, 0x24});
+    r->read_dtc(0xfa10, {0x4,0x19,0x02, 0xff});
+    /* First frame */
+    c1->capture();
+    testFrames(result_frame, *c1);
+
+    result_frame = createFrame(0x10fa, {0x21, 0x01, 0x15, 0x24, 0x01, 0x90, 0x24, 0x01});
     c1->capture();
     testFrames(result_frame, *c1);
 }

@@ -5,6 +5,71 @@
 
 #include "FileManager.h"
 #include "Globals.h"
+#include <set>
+#include <map>
+
+
+void FileManager::v_ReplaceOrAddWritableDID(const std::vector<uint16_t>& vecU16WritableDIDs, uint16_t u16OldDid, uint16_t u16NewDid) {
+    auto* pVecU16ModifiableDIDs = const_cast<std::vector<uint16_t>*>(&vecU16WritableDIDs);
+
+    auto itVecU16Did = std::find(pVecU16ModifiableDIDs->begin(), pVecU16ModifiableDIDs->end(), u16OldDid);
+    if (itVecU16Did != pVecU16ModifiableDIDs->end()) {
+        *itVecU16Did = u16NewDid;
+    } else {
+        pVecU16ModifiableDIDs->push_back(u16NewDid);
+    }
+}
+
+void FileManager::v_AppendUniqueMapToFile(const std::string& strFileName, const std::unordered_map<uint16_t, std::vector<uint8_t>>& mapU16VecU8Data)
+{
+    std::unordered_map<uint16_t, std::vector<uint8_t>> mapU16VecU8ExistingData;
+
+    std::ifstream ifInFile(strFileName);
+    if (ifInFile.is_open())
+    {
+        std::string strLine;
+        while (std::getline(ifInFile, strLine))
+        {
+            std::istringstream iss(strLine);
+            uint16_t u16ExistingDid;
+            std::vector<uint8_t> vecU8ExistingValue;
+            uint8_t u8Byte;
+
+            if (iss >> std::hex >> u16ExistingDid)
+            {
+                while (iss >> std::hex >> u8Byte)
+                {
+                    vecU8ExistingValue.push_back(u8Byte);
+                }
+                mapU16VecU8ExistingData[u16ExistingDid] = vecU8ExistingValue;
+            }
+        }
+        ifInFile.close();
+    }
+
+    for (const auto& [u16DataIdentifier, vecU8Data] : mapU16VecU8Data)
+    {
+        mapU16VecU8ExistingData[u16DataIdentifier] = vecU8Data;
+    }
+
+    std::ofstream ofOutFile(strFileName, std::ios::trunc);
+    if (!ofOutFile.is_open())
+    {
+        throw std::runtime_error("Failed to open file: " + strFileName);
+    }
+
+    for (const auto& [u16DataIdentifier, vecU8Data] : mapU16VecU8ExistingData)
+    {
+        ofOutFile << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << u16DataIdentifier << " ";
+        for (uint8_t u8Byte : vecU8Data)
+        {
+            ofOutFile << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << static_cast<int>(u8Byte) << " ";
+        }
+        ofOutFile << "\n";
+    }
+
+    ofOutFile.close();
+}
 
 std::unordered_map<uint16_t, std::string> FileManager::getExistingDIDValues(const std::string& strFilePath) {
     std::unordered_map<uint16_t, std::string> mapU16Str_ExistingValues;
@@ -170,11 +235,13 @@ bool FileManager::getEcuPath(uint8_t ecu_id, std::string& ecu_path, uint8_t para
             if(param == 0)
             {
                 ecu_path = std::string(PROJECT_PATH) + "/MCU_SW_VERSION_" + version + ".zip";
+                LOG_DEBUG(logger.GET_LOGGER(), "ecu_path: {}", ecu_path);
                 zip_ecu_path = ecu_path;
             }
             else
             {
                 ecu_path = std::string(PROJECT_PATH) + ((param == 1) ? "/main_mcu_new.zip" : "/backend/mcu/");
+                LOG_DEBUG(logger.GET_LOGGER(), "ecu_path: {}", ecu_path);
             }
             break;
         }
@@ -360,7 +427,7 @@ void FileManager::setDidValue(const uint16_t did, const std::vector<uint8_t>& va
         case 0x14:
         file_path += "/backend/ecu_simulation/HVACModule/hvac_data.txt";
         break;
-       
+
         default:
         LOG_ERROR(logger.GET_LOGGER(), "Module with id {:x} not supported.", receiver_id);
         break;
@@ -413,7 +480,7 @@ const std::vector<uint8_t> FileManager::getDidValue(const uint16_t did, canid_t 
     std::string file_path = std::string(PROJECT_PATH);
     /* Extract and switch sender and receiver */
     uint8_t receiver_id = can_id  & 0xFF;       
-               
+
     switch (receiver_id)
     {
         case 0x10:
@@ -438,7 +505,7 @@ const std::vector<uint8_t> FileManager::getDidValue(const uint16_t did, canid_t 
        
         default:
         LOG_ERROR(logger.GET_LOGGER(), "Module with id {:x} not supported.", receiver_id);
-        break;
+        return {};
     }
 
     auto data_map = FileManager::readMapFromFile(file_path);

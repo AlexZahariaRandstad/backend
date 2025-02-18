@@ -18,6 +18,12 @@
 #include "GenerateFrames.h"
 #include "Logger.h"
 
+#include "MCUModule.h"
+#include "BatteryModule.h"
+#include "EngineModule.h"
+#include "DoorsModule.h"
+#include "HVACModule.h"
+
 class ReadDataByIdentifier
 {
     public:

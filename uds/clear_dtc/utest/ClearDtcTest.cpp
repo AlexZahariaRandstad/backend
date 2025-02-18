@@ -31,6 +31,7 @@
 #include "../../../utils/include/TestUtils.h"
 #include "../../../uds/authentication/include/SecurityAccess.h"
 #include "Globals.h"
+#include "FileGuard.h"
 
 int socket1;
 int socket2;
@@ -44,11 +45,13 @@ struct ClearDtcTest : testing::Test
     SecurityAccess* r;
     CaptureFrame* c1;
     Logger* logger;
+    std::string strDtcFilePath ="";
     ClearDtcTest()
     {
+        v_loadProjectPath();
         logger = new Logger();
-        std::string dtc_file_path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/dtcs.txt";
-        c = new ClearDtc(dtc_file_path ,*logger, socket2);
+        strDtcFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/dtcs.txt";
+        c = new ClearDtc(strDtcFilePath ,*logger, socket2);
         r = new SecurityAccess(socket2, *logger);
         c1 = new CaptureFrame(socket1);
     }
@@ -88,11 +91,17 @@ TEST_F(ClearDtcTest, InvalidGroup) {
 /* Test for Clear Body DTCs */
 TEST_F(ClearDtcTest, ClearBodyDTCs) {
     std::cerr << "Running ClearBodyDTCs" << std::endl;
-
-    struct can_frame result_frame = createFrame(0x10FA, {0x01, 0x54});
+    const std::map<std::string, std::vector<uint16_t>> mapStrVecU16_DtcValues = {
+        {"P0190", {0x24}},
+        {"P0115", {0x24}}
+    };
+    // Instantiate the guard to ensure file deletion on scope exit
+    FileGuard fileGuard(strDtcFilePath);
+    v_CreateDummyDtcFile(strDtcFilePath, mapStrVecU16_DtcValues);
+    struct can_frame resultFrame = createFrame(0x10FA, {0x02, 0x54, 0x00});
     c->clearDtc(0xFA10, {0x04, 0x14, 0x02, 0x0A, 0xAA});
     c1->capture();
-    testFrames(result_frame, *c1);
+    testFrames(resultFrame, *c1);
 
     std::cerr << "Finished ClearBodyDTCs" << std::endl;
 }
@@ -100,11 +109,17 @@ TEST_F(ClearDtcTest, ClearBodyDTCs) {
 /* Test for Clear Powertrain DTCs */
 TEST_F(ClearDtcTest, ClearPowertrainDTCs) {
     std::cerr << "Running ClearPowertrainDTCs" << std::endl;
-
-    struct can_frame result_frame = createFrame(0x10FA, {0x01, 0x54});
+    const std::map<std::string, std::vector<uint16_t>> mapStrVecU16_DtcValues = {
+        {"P0190", {0x24}},
+        {"P0115", {0x24}}
+    };
+    // Instantiate the guard to ensure file deletion on scope exit
+    FileGuard fileGuard(strDtcFilePath);
+    v_CreateDummyDtcFile(strDtcFilePath, mapStrVecU16_DtcValues);
+    struct can_frame resultFrame = createFrame(0x10FA, {0x02, 0x54, 0x00});
     c->clearDtc(0xFA10, {0x04, 0x14, 0x01, 0x0A, 0xAA});
     c1->capture();
-    testFrames(result_frame, *c1);
+    testFrames(resultFrame, *c1);
 
     std::cerr << "Finished ClearPowertrainDTCs" << std::endl;
 }
@@ -113,10 +128,20 @@ TEST_F(ClearDtcTest, ClearPowertrainDTCs) {
 TEST_F(ClearDtcTest, ClearAllDTCs) {
     std::cerr << "Running ClearAllDTCs" << std::endl;
 
-    struct can_frame result_frame = createFrame(0x10FA, {0x01, 0x54});
+    //Ensure dtcs.txt is empty before the test
+    std::ofstream ofOutFile(c->str_GetPathToDTC(), std::ios::out | std::ios::trunc);
+    ofOutFile.close();
+
+    //Write 3 DTCs into dtcs.txt
+    ofOutFile.open(c->str_GetPathToDTC(), std::ios::out | std::ios::trunc);
+    ofOutFile << "P0001\nP0002\nP0003\n";  
+    ofOutFile.close();
+
+    //Expected CAN response 3 DTCs cleared (0x03)
+    struct can_frame stResultFrame = createFrame(0x10FA, {0x02, 0x54, 0x03});
     c->clearDtc(0xFA10, {0x04, 0x14, 0xFF, 0xFF, 0xFF});
     c1->capture();
-    testFrames(result_frame, *c1);
+    testFrames(stResultFrame, *c1);
 
     std::cerr << "Finished ClearAllDTCs" << std::endl;
 }
@@ -125,8 +150,8 @@ TEST_F(ClearDtcTest, ClearAllDTCs) {
 TEST_F(ClearDtcTest, WrongPath) {
     std::cerr << "Running WrongPath" << std::endl;
 
-    std::string dtc_file_path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/dtcs.txt";
-    c = new ClearDtc(dtc_file_path ,*logger, socket2);
+    std::string strDtcFilePathWrong = std::string(PROJECT_PATH) + "/backend/ecu_simulation/WrongPath/dtcs.txt";
+    c = new ClearDtc(strDtcFilePathWrong ,*logger, socket2);
 
     struct can_frame result_frame = createFrame(0x10FA, {0x03, 0x7F, 0x14, 0x22});
     c->clearDtc(0xFA10, {0x04, 0x14, 0x01, 0x0A, 0xAA});

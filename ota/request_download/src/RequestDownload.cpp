@@ -419,3 +419,8 @@ RDSData RequestDownloadService::getRdsData()
 {
     return RequestDownloadService::rds_data;
 }
+
+void RequestDownloadService::vSetRdsDataFormat(uint8_t u8Format)
+{
+    RequestDownloadService::rds_data.data_format = u8Format;
+}

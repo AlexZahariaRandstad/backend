@@ -55,6 +55,7 @@ void ReadDTC::read_dtc(int id, std::vector<uint8_t> data)
     }
 }
 
+
 void ReadDTC::number_of_dtc(int id, int dtc_status_mask)
 {
     int new_id = ((id & 0xFF) << 8) | ((id >> 8) & 0xFF);
@@ -111,6 +112,8 @@ void ReadDTC::report_dtcs(int id, int dtc_status_mask)
     try
     {
         MyReadFile.open(this->path_folder);
+        LOG_INFO(logger.GET_LOGGER(), "Attempting to open file at path: {}", this->path_folder);
+
         if (!MyReadFile.is_open())
         {
             throw std::runtime_error("Unable to open file");

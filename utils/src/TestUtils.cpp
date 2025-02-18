@@ -12,6 +12,59 @@
 #include "../include/CaptureFrame.h"
 #include "../include/Globals.h"
 #include "../../uds/authentication/include/SecurityAccess.h"
+#include <filesystem>
+#include <fstream>
+#include <map>
+
+void v_CreateDummyZipFile(const std::string& strFilePath)
+{
+    if (std::filesystem::exists(strFilePath))
+    {
+        std::filesystem::remove(strFilePath);
+    }
+
+    std::vector<uint8_t> vecU8ZipSignature = {0x50, 0x4B, 0x03, 0x04};
+
+    std::ofstream ofOutFile(strFilePath, std::ios::binary | std::ios::trunc);
+    if (!ofOutFile.is_open())
+    {
+        throw std::runtime_error("Failed to create dummy ZIP file: " + strFilePath);
+    }
+
+    ofOutFile.write(reinterpret_cast<const char*>(vecU8ZipSignature.data()), vecU8ZipSignature.size());
+
+    std::vector<uint8_t> vecU8DummyContent = {'T', 'E', 'S', 'T'};
+    ofOutFile.write(reinterpret_cast<const char*>(vecU8DummyContent.data()), vecU8DummyContent.size());
+
+    ofOutFile.close();
+}
+
+void v_CreateDummyDtcFile(const std::string& strFilePath, const std::map<std::string, std::vector<uint16_t>>& mapStrVecU16_DtcValues)
+{
+    if (std::filesystem::exists(strFilePath))
+    {
+        std::filesystem::remove(strFilePath);
+    }
+
+    std::ofstream ofOutFile(strFilePath, std::ios::trunc);
+    if (!ofOutFile.is_open())
+    {
+        throw std::runtime_error("Failed to create dummy DTC file: " + strFilePath);
+    }
+
+    for (const auto& dtcPair : mapStrVecU16_DtcValues)
+    {
+        ofOutFile << dtcPair.first;
+
+        for (uint8_t value : dtcPair.second) {
+            ofOutFile << " " << std::hex << std::uppercase << static_cast<int>(value);
+        }
+
+        ofOutFile << "\n";
+    }
+
+    ofOutFile.close();
+}
 
 bool containsLine(const std::string& output, const std::string& line){
     return output.find(line) != std::string::npos;

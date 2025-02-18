@@ -20,6 +20,7 @@
 
 #include "Logger.h"
 #include "GenerateFrames.h"
+#include <map>
 
 #define ELF_SIGNATURE 0x7F454C46
 #define ZIP_SIGNATURE 0x504B0304   
@@ -42,6 +43,14 @@ public:
      * @return std::unordered_map<uint16_t, std::string> A map containing the extracted DID values.
      */
     static std::unordered_map<uint16_t, std::string> getExistingDIDValues(const std::string& strFilePath);
+
+    /**
+     * @brief Method used to append unique key-value pairs from a map to a file.
+     * 
+     * @param strFileName The name of the file where the data will be appended (if not exist).
+     * @param mapU16VecU8Data The map containing key-value pairs to be written to the file.
+     */
+    static void v_AppendUniqueMapToFile(const std::string& strFileName, const std::unordered_map<uint16_t, std::vector<uint8_t>>& mapU16VecU8Data);
 
     /**
      * @brief Method used for writing a map to a file
@@ -100,7 +109,7 @@ public:
     static bool getEcuPath(uint8_t ecu_id, std::string& ecu_path, uint8_t param, Logger& rc_logger, const std::string& version = "");
 
     static bool validateData(std::vector<uint8_t>& file_data, FileType file_type);
-    
+
     /**
      * @brief Method to extract the zipped file.
      * 
@@ -125,6 +134,17 @@ public:
     * @return std::vector<uint8_t> 
     */
     static const std::vector<uint8_t> getDidValue(const uint16_t did, canid_t can_id, Logger& logger);
+
+
+    /**
+     * @brief Replace or add a writable DID
+     * 
+     * @param vecU16WritableDIDs A vector containing writable DID values
+     * @param u16OldDid The DID to be replaced
+     * @param u16NewDid The new DID to insert in place of the old one
+     */
+    static void v_ReplaceOrAddWritableDID(const std::vector<uint16_t>& vecU16WritableDIDs, uint16_t u16OldDid, uint16_t u16NewDid);
+
 };
 
 #endif

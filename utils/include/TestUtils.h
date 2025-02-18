@@ -19,6 +19,10 @@
 #include "CaptureFrame.h"
 #include "Globals.h"
 #include "../../uds/authentication/include/SecurityAccess.h"
+#include <fstream>
+#include <filesystem>
+#include <map>
+#include <stdexcept>
 
 /**
  * @brief Check if a line is inside of an output
@@ -95,4 +99,20 @@ int createSocket(uint8_t interface_number);
  * @param sid the id of the service for which we request access
  */
 void v_requestSecurityAccess(std::shared_ptr<SecurityAccess> spSecurityAccess, std::shared_ptr<CaptureFrame> spCapturedFrame, uint8_t sid);
+
+/**
+ * @brief Create a dummy DTC file
+ *
+ * @param strFilePath The path where the dummy DTC file will be created
+ * @param mapStrVecU16_DtcValues A map containing DTC codes
+ */
+void v_CreateDummyDtcFile(const std::string& strFilePath, const std::map<std::string, std::vector<uint16_t>>& mapStrVecU16_DtcValues);
+
+/**
+ * @brief Create a dummy ZIP file
+ *
+ * @param strFilePath The path where the dummy ZIP file will be created
+ */
+void v_CreateDummyZipFile(const std::string& strFilePath);
+
 #endif

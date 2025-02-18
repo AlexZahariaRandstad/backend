@@ -96,6 +96,7 @@ UTILS_OBJS = $(OBJ_DIR)/MemoryManager.o \
 			 $(OBJ_DIR)/ECU_ReceiveFrames.o \
 			 $(OBJ_DIR)/HandleFrames.o \
 			 $(OBJ_DIR)/FileManager.o \
+			 $(OBJ_DIR)/FileGuard.o \
 			 $(OBJ_DIR)/ECU.o \
 			 $(OBJ_DIR)/Globals.o
 
@@ -218,6 +219,9 @@ $(OBJ_DIR)/MemoryManager.o: $(UTILS_DIR)/MemoryManager.cpp
 $(OBJ_DIR)/FileManager.o: $(UTILS_DIR)/FileManager.cpp
 	$(CXX) $(CFLAGS) -c $(UTILS_DIR)/FileManager.cpp -o $(OBJ_DIR)/FileManager.o
 
+$(OBJ_DIR)/FileGuard.o: $(UTILS_DIR)/FileGuard.cpp
+	$(CXX) $(CFLAGS) -c $(UTILS_DIR)/FileGuard.cpp -o $(OBJ_DIR)/FileGuard.o
+
 $(OBJ_DIR)/TransferData.o: $(OTA_DIR)/transfer_data/src/TransferData.cpp
 	$(CXX) $(CFLAGS) -c $(OTA_DIR)/transfer_data/src/TransferData.cpp -o $(OBJ_DIR)/TransferData.o
 
@@ -260,6 +264,7 @@ UTILS_OBJS_TEST = $(OBJ_DIR)/MemoryManager_test.o \
 				  $(OBJ_DIR)/ReceiveFrames_test_utils.o \
 				  $(OBJ_DIR)/ECU_test.o \
                   $(OBJ_DIR)/FileManager_test.o \
+				  $(OBJ_DIR)/FileGuard_test.o \
 				  $(OBJ_DIR)/CaptureFrame_test.o
 
 OBJS_GENERATE_TEST = $(OBJ_DIR)/Logger_test.o \
@@ -439,6 +444,9 @@ $(OBJ_DIR)/ReceiveFrames_test_utils.o: $(UTILS_DIR)/ReceiveFrames.cpp
 
 $(OBJ_DIR)/FileManager_test.o: $(UTILS_DIR)/FileManager.cpp
 	$(CXX) $(CFLAGS) $(CFLAGSTST) -c $(UTILS_DIR)/FileManager.cpp -o $(OBJ_DIR)/FileManager_test.o $(CFLAGSTST2) $(LDFLAGS)
+
+$(OBJ_DIR)/FileGuard_test.o: $(UTILS_DIR)/FileGuard.cpp
+	$(CXX) $(CFLAGS) $(CFLAGSTST) -c $(UTILS_DIR)/FileGuard.cpp -o $(OBJ_DIR)/FileGuard_test.o $(CFLAGSTST2) $(LDFLAGS)
 
 $(OBJ_DIR)/ReadDtcInformation_test.o: $(UDS_DIR)/read_dtc_information/src/ReadDtcInformation.cpp
 	$(CXX) $(CFLAGS) $(CFLAGSTST) -c $(UDS_DIR)/read_dtc_information/src/ReadDtcInformation.cpp -o $(OBJ_DIR)/ReadDtcInformation_test.o $(CFLAGSTST2) $(LDFLAGS)
