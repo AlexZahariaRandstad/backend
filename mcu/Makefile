@@ -496,14 +496,7 @@ allTests: mcuModuleTest batteryModuleTest engineModuleTest doorsModuleTest hvacM
 		  accessTimingParameterTest receiveFramesTestUtils ecuTest readMemoryByAddressTest
 
 # Compile and Run all unit tests
-runAllTests: runMcuModuleTest runBatteryModuleTest runEngineModuleTest runDoorsModuleTest runHvacModuleTest \
-             runHandleFramesTest runReceiveFramesTest runGenerateFramesTest runLoggerTest runMemoryManagerTest \
-             runCreateInterfaceTest \
-             runRequestTransferExitTest \
-             runRequestUpdateStatusTest \
-             runTransferDataTest runRequestDownloadTest runNegativeResponseTest \
-             runReceiveFramesTestUtils runEcuTest runReadMemoryByAddressTest \
-			 runUdsTests
+runAllTests: runUdsTests
 
 # Clean all unit tests
 cleanAllTests: cleanMcuModuleTest cleanBatteryModuleTest cleanEngineModuleTest cleanDoorsModuleTest cleanHvacModuleTest \

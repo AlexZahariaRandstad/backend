@@ -26,22 +26,50 @@ RoutineControl::RoutineControl(int socket, Logger& rc_logger)
 /* Function to handle the RoutineControl request */
 void RoutineControl::routineControl(canid_t can_id, const std::vector<uint8_t>& request)
 {
+    /* ex: request[3] = 0x02, request[4] = 0x01
+       Solve: (0x02 << 8) → 0x0200,  0x0200 | 0x01 → 0x0201
+       Result: routine_identifier = 0x0201 */
     uint16_t routine_identifier = request[3] << 8 | request[4];
+
     std::vector<uint8_t> response;
     NegativeResponse nrc(socket, rc_logger);
     /* Auxiliary variable used for can_id in setDidValue method */
     canid_t aux_can_id = can_id;
+
+    /* Extract the least significant byte
+       ex: can_id = 0x0010FA20 -> receiver_id = 0x20 */
     uint8_t receiver_id = can_id & 0xFF;
+
+    /* Extract the second least significant byte
+       ex: can_id = 0x0010FA20 -> sender_id = 0xFA */
     uint8_t sender_id = can_id >> 8 & 0xFF;
+
+    /* Extract the third least significant byte
+       ex: can_id = 0x0010FA20 -> target_id = 0x10 */
     uint8_t target_id = can_id >> 16 & 0xFF;
+
+    auto u8DidValue = FileManager::getDidValue(OTA_UPDATE_STATUS_DID, aux_can_id, rc_logger);
+
+    if (u8DidValue.empty())
+    {
+        LOG_WARN(rc_logger.GET_LOGGER(), "OTA_UPDATE_STATUS_DID not found in data map.");
+        nrc.sendNRC(can_id,ROUTINE_CONTROL_SID,NegativeResponse::SFNS);
+        AccessTimingParameter::stopTimingFlag(receiver_id, 0x31);
+        return;
+    }
+
+    // Safely access the first byte of the vector
+    OtaUpdateStatesEnum ota_state = static_cast<OtaUpdateStatesEnum>(u8DidValue[0]);
+
     uint8_t sub_function = request[2];
     std::vector<uint8_t> routine_result = {0x00};
     /* reverse ids */
     can_id = receiver_id << 8 | sender_id;
-    OtaUpdateStatesEnum ota_state = static_cast<OtaUpdateStatesEnum>(FileManager::getDidValue(OTA_UPDATE_STATUS_DID, aux_can_id, rc_logger)[0]);
 
     if (request.size() < 6 || (request.size() - 1 != request[0]))
     {
+        LOG_INFO(rc_logger.GET_LOGGER(), "Routine Control Incorrect message length or invalid format");
+
         /* Incorrect message length or invalid format - prepare a negative response */
         nrc.sendNRC(can_id,ROUTINE_CONTROL_SID,NegativeResponse::IMLOIF);
         AccessTimingParameter::stopTimingFlag(receiver_id, 0x31);
@@ -50,6 +78,8 @@ void RoutineControl::routineControl(canid_t can_id, const std::vector<uint8_t>& 
 
     if (sub_function < 0x01 || sub_function > 0x03)
     {
+        LOG_INFO(rc_logger.GET_LOGGER(), "Routine Control Sub Function not supported");
+
         /* Sub Function not supported - prepare a negative response */
         nrc.sendNRC(can_id,ROUTINE_CONTROL_SID,NegativeResponse::SFNS);
         AccessTimingParameter::stopTimingFlag(receiver_id, 0x31);
@@ -58,6 +88,8 @@ void RoutineControl::routineControl(canid_t can_id, const std::vector<uint8_t>& 
 
     if (receiver_id == 0x10 && !SecurityAccess::getMcuState(rc_logger))
     {
+        LOG_INFO(rc_logger.GET_LOGGER(), "Routine Control Security Access Denied");
+
         nrc.sendNRC(can_id,ROUTINE_CONTROL_SID,NegativeResponse::SAD);
         AccessTimingParameter::stopTimingFlag(receiver_id, 0x31);
         return;
@@ -67,6 +99,8 @@ void RoutineControl::routineControl(canid_t can_id, const std::vector<uint8_t>& 
               receiver_id == 0x13 || receiver_id == 0x14) &&
               !ReceiveFrames::getEcuState())
     {
+        LOG_INFO(rc_logger.GET_LOGGER(), "Routine Control Security Access Denied");
+
         nrc.sendNRC(can_id,ROUTINE_CONTROL_SID,NegativeResponse::SAD);
         AccessTimingParameter::stopTimingFlag(receiver_id, 0x31);
         return;
@@ -74,6 +108,8 @@ void RoutineControl::routineControl(canid_t can_id, const std::vector<uint8_t>& 
     /* when our identifiers will be defined, this range should be smaller */
     if (routine_identifier < 0x0100 || routine_identifier > 0x0601)
     {
+        LOG_INFO(rc_logger.GET_LOGGER(), "Routine Control Request Out Of Range");
+
         /* Request Out of Range - prepare a negative response */
         nrc.sendNRC(can_id,ROUTINE_CONTROL_SID,NegativeResponse::ROOR);
         AccessTimingParameter::stopTimingFlag(receiver_id, 0x31);
@@ -82,6 +118,7 @@ void RoutineControl::routineControl(canid_t can_id, const std::vector<uint8_t>& 
 
     std::vector<uint8_t> binary_data;
     std::vector<uint8_t> adress_data;
+
     switch(routine_identifier)
     {
         /* Memory erase routine needs 2 requests because of request size limitations.
@@ -435,7 +472,7 @@ bool RoutineControl::verifySoftware(uint8_t receiver_id)
     else
     {
         std::string path_to_zip;
-        if(FileManager::getEcuPath(receiver_id, path_to_zip, 3, rc_logger) == 0)
+        if(FileManager::getEcuPath(receiver_id, path_to_zip, 0, rc_logger, "1.0") == 0)
         {
             LOG_ERROR(rc_logger.GET_LOGGER(), "Error in reading file path, may not exist: {}", path_to_zip);
             return 0;

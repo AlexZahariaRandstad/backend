@@ -16,7 +16,7 @@
 
 WriteDataByIdentifier::WriteDataByIdentifier(Logger& wdbi_logger, int socket)
             : generate_frames(socket, wdbi_logger), wdbi_logger(wdbi_logger)
-{   
+{
     this->socket = socket;
 }
 
@@ -66,7 +66,7 @@ void WriteDataByIdentifier::WriteDataByIdentifierService(canid_t frame_id, std::
             case 0x10:
                 if((std::find(MCU::mcu->writable_MCU_DID.begin(), MCU::mcu->writable_MCU_DID.end(), did)) == MCU::mcu->writable_MCU_DID.end())
                 {
-                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory");
+                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory 0x10");
                     nrc.sendNRC(id,WDBI_SID,NegativeResponse::ROOR);
                     MCU::mcu->stop_flags[0x2E] = false;
                     return;
@@ -75,7 +75,7 @@ void WriteDataByIdentifier::WriteDataByIdentifierService(canid_t frame_id, std::
             case 0x11:
                 if((std::find(battery->writable_Battery_DID.begin(), battery->writable_Battery_DID.end(), did)) == battery->writable_Battery_DID.end())
                 {
-                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory");
+                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory 0x11");
                     nrc.sendNRC(id,WDBI_SID,NegativeResponse::ROOR);
                     battery->_ecu->stop_flags[0x2E] = false;
                     return;
@@ -84,7 +84,7 @@ void WriteDataByIdentifier::WriteDataByIdentifierService(canid_t frame_id, std::
             case 0x12:
                 if((std::find(engine->writable_Engine_DID.begin(), engine->writable_Engine_DID.end(), did)) == engine->writable_Engine_DID.end())
                 {
-                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory");
+                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory 0x12");
                     nrc.sendNRC(id,WDBI_SID,NegativeResponse::ROOR);
                     engine->_ecu->stop_flags[0x2E] = false;
                     return;
@@ -93,7 +93,7 @@ void WriteDataByIdentifier::WriteDataByIdentifierService(canid_t frame_id, std::
             case 0x13:
                 if((std::find(doors->writable_Doors_DID.begin(), doors->writable_Doors_DID.end(), did)) == doors->writable_Doors_DID.end())
                 {
-                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory");
+                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory 0x13");
                     nrc.sendNRC(id,WDBI_SID,NegativeResponse::ROOR);
                     doors->_ecu->stop_flags[0x2E] = false;
                     return;
@@ -102,7 +102,7 @@ void WriteDataByIdentifier::WriteDataByIdentifierService(canid_t frame_id, std::
             case 0x14:
                 if((std::find(hvac->writable_HVAC_DID.begin(), hvac->writable_HVAC_DID.end(), did)) == hvac->writable_HVAC_DID.end())
                 {
-                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory");
+                    LOG_ERROR(wdbi_logger.GET_LOGGER(), "Request Out Of Range: Identifier not found in memory 0x14");
                     nrc.sendNRC(id,WDBI_SID,NegativeResponse::ROOR);
                     hvac->_ecu->stop_flags[0x2E] = false;
                     return;
