@@ -104,7 +104,7 @@ exec ./main_doors
 '
 
 # Define the commands for the HVACModule terminal
-hvacModulecommand='
+hvacModuleCommand='
 cd ../ecu_simulation/HVACModule &&
 echo "Navigated to ../ecu_simulation/HVACModule" &&
 mkdir -p logs &&
