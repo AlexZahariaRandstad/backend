@@ -2,6 +2,9 @@
 #include <unistd.h>
 
 #include "GenerateFrames.h"
+#include "RequestUpdateStatus.h"
+#include "FileManager.h"
+#include "NegativeResponse.h"
 
 GenerateFrames::GenerateFrames(Logger& logger)
     : logger(logger)
@@ -172,6 +175,21 @@ void GenerateFrames::securityAccessSendKey(int id, const std::vector<uint8_t> &k
 void GenerateFrames::routineControl(int id, uint8_t sub_function, uint16_t routine_identifier, std::vector<uint8_t>& routine_result, bool response)
 {
     uint8_t default_pci = 0x04;
+    uint8_t u8ReceiverId = (id >> 8) & 0xFF;
+
+    // Retrieve the current OTA status using the OTA_UPDATE_STATUS_DID
+    OtaUpdateStatesEnum eOtaState = static_cast<OtaUpdateStatesEnum>(
+        FileManager::getDidValue(OTA_UPDATE_STATUS_DID, static_cast<canid_t>(u8ReceiverId), logger)[0]);
+
+    // If OTA is already initialized or the transfer process is complete, send a Negative Response (CNC)
+    if (eOtaState == INIT || eOtaState == PROCESSING_TRANSFER_COMPLETE)
+    {
+        LOG_WARN(logger.GET_LOGGER(), "OTA already initialized, sending Negative Response (CNC)");
+        std::vector<uint8_t> vecU8CncResponse = {default_pci, 0x7F, 0x31, NegativeResponse::CNC};
+        this->sendFrame(id, vecU8CncResponse);
+        return;
+    }
+
     if (!response)
     {
         std::vector<uint8_t> data = {default_pci, 0x31, sub_function, (uint8_t)(routine_identifier / 0x100), (uint8_t)(routine_identifier % 0x100)};
