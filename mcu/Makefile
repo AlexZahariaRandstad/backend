@@ -271,6 +271,7 @@ OBJS_GENERATE_TEST = $(OBJ_DIR)/Logger_test.o \
                   	 $(OBJ_DIR)/GenerateFrames_test.o \
 					 $(OBJ_DIR)/NegativeResponse_test.o \
 					 $(OBJ_DIR)/SecurityAccess_test.o \
+					 $(OBJ_DIR)/FileManager_test.o \
 					 $(OBJ_DIR)/Globals_test.o \
 					 $(OBJ_DIR)/TestUtils_test.o \
 					 $(OBJ_DIR)/CaptureFrame_test.o
@@ -308,7 +309,8 @@ OBJS_SECURITYACCESS_TEST = $(OBJ_DIR)/Logger_test.o \
 			   			   $(OBJ_DIR)/NegativeResponse_test.o \
 						   $(OBJ_DIR)/Globals_test.o \
 						   $(OBJ_DIR)/TestUtils_test.o \
-						   $(OBJ_DIR)/CaptureFrame_test.o
+						   $(OBJ_DIR)/CaptureFrame_test.o \
+						   $(OBJ_DIR)/FileManager_test.o \
 
 OBJS_TESTERPRESENT_TEST = $(OBJ_DIR)/Logger_test.o \
 						  $(OBJ_DIR)/GenerateFrames_test.o \
@@ -366,6 +368,7 @@ OBJS_TRANSFERDATA_TEST = $(OBJ_DIR)/Logger_test.o \
 
 OBJS_NEGATIVERESPONSE_TEST = $(OBJ_DIR)/Logger_test.o \
                              $(OBJ_DIR)/GenerateFrames_test.o \
+							 $(OBJ_DIR)/FileManager_test.o \
                              $(OBJ_DIR)/NegativeResponse_test.o \
 							 $(OBJ_DIR)/SecurityAccess_test.o \
 							 $(OBJ_DIR)/Globals_test.o \
@@ -495,11 +498,12 @@ allTests: mcuModuleTest batteryModuleTest engineModuleTest doorsModuleTest hvacM
 # Compile and Run all unit tests
 runAllTests: runMcuModuleTest runBatteryModuleTest runEngineModuleTest runDoorsModuleTest runHvacModuleTest \
              runHandleFramesTest runReceiveFramesTest runGenerateFramesTest runLoggerTest runMemoryManagerTest \
-             runCreateInterfaceTest runDiagnosticSessionControlTest runWriteDataByIdentifierTest \
-             runReadDataByIdentifierTest runRequestTransferExitTest runReadDtcTest runClearDtcTest \
-             runRequestUpdateStatusTest runSecurityAccessTest runTesterPresentTest runRoutineControlTest \
-             runTransferDataTest runRequestDownloadTest runEcuResetTest runNegativeResponseTest \
-             runAccessTimingParameterTest runReceiveFramesTestUtils runEcuTest runReadMemoryByAddressTest
+             runCreateInterfaceTest \
+             runRequestTransferExitTest \
+             runRequestUpdateStatusTest \
+             runTransferDataTest runRequestDownloadTest runNegativeResponseTest \
+             runReceiveFramesTestUtils runEcuTest runReadMemoryByAddressTest \
+			 runUdsTests
 
 # Clean all unit tests
 cleanAllTests: cleanMcuModuleTest cleanBatteryModuleTest cleanEngineModuleTest cleanDoorsModuleTest cleanHvacModuleTest \
@@ -510,6 +514,16 @@ cleanAllTests: cleanMcuModuleTest cleanBatteryModuleTest cleanEngineModuleTest c
                cleanNegativeResponseTest cleanAccessTimingParameterTest cleanReceiveFramesTestUtils cleanEcuTest cleanReadMemoryByAddressTest \
                clean
 
+# Compile and Run all UDS unit tests
+runUdsTests: runSecurityAccessTest runAccessTimingParameterTest runClearDtcTest \
+	runDiagnosticSessionControlTest runEcuResetTest runReadDataByIdentifierTest runReadDtcTest \
+	runRoutineControlTest runTesterPresentTest runWriteDataByIdentifierTest
+
+# Clean all UDS unit tests
+cleanUdsTests: cleanSecurityAccessTest cleanAccessTimingParameterTest cleanClearDtcTest \
+	cleanDiagnosticSessionControlTest cleanEcuResetTest cleanReadDataByIdentifierTest \
+	cleanReadDtcTest cleanRoutineControlTest cleanTesterPresentTest cleanWriteDataByIdentifierTest \
+	clean
 
 # HandleFrames Unit tests
 runHandleFramesTest: handleFramesTest
@@ -700,6 +714,7 @@ cleanCreateInterfaceTest:
 
 
 # DiagnosticSessionControl Unit tests
+runDiagnosticSessionControlTest: allPreProcess
 runDiagnosticSessionControlTest: diagnosticSessionControlTest
 	$(UDS_DIR)/diagnostic_session_control/utest/diagnosticSessionControlTest.out
 
@@ -740,6 +755,7 @@ cleanReadMemoryByAddressTest:
 
 
 # WriteDataByIdentifier Unit tests
+runWriteDataByIdentifierTest: allPreProcess
 runWriteDataByIdentifierTest: writeDataByIdentifierTest
 	$(UDS_DIR)/write_data_by_identifier/utest/writeDataByIdentifierTest.out
 
@@ -760,6 +776,7 @@ cleanWriteDataByIdentifierTest:
 
 
 # ReadDataByIdentifier Unit tests
+runReadDataByIdentifierTest: allPreProcess
 runReadDataByIdentifierTest: readDataByIdentifierTest
 	$(UDS_DIR)/read_data_by_identifier/utest/readDataByIdentifierTest.out
 
@@ -800,6 +817,7 @@ cleanRequestTransferExitTest:
 
 
 # ReadDTC Unit tests
+runReadDtcTest: allPreProcess
 runReadDtcTest: readDtcTest
 	$(UDS_DIR)/read_dtc_information/utest/readDtcTest.out
 
@@ -820,6 +838,7 @@ cleanReadDtcTest:
 
 
 # ClearDTC Unit tests
+runClearDtcTest: allPreProcess
 runClearDtcTest: clearDtcTest
 	$(UDS_DIR)/clear_dtc/utest/clearDtcTest.out
 
@@ -860,6 +879,7 @@ cleanRequestUpdateStatusTest:
 
 
 # SecurityAccess Unit tests
+runSecurityAccessTest: allPreProcess
 runSecurityAccessTest: securityAccessTest
 	$(UDS_DIR)/authentication/utest/securityAccessTest.out
 
@@ -880,6 +900,7 @@ cleanSecurityAccessTest:
 
 
 # TesterPresent Unit tests
+runTesterPresentTest: allPreProcess
 runTesterPresentTest: testerPresentTest
 	$(UDS_DIR)/tester_present/utest/testerPresentTest.out
 
@@ -900,6 +921,7 @@ cleanTesterPresentTest:
 
 
 # RoutineControl Unit tests
+runRoutineControlTest: allPreProcess
 runRoutineControlTest: routineControlTest
 	$(UDS_DIR)/routine_control/utest/routineControlTest.out
 
@@ -920,6 +942,7 @@ cleanRoutineControlTest:
 
 
 # EcuReset Unit tests
+runEcuResetTest: allPreProcess
 runEcuResetTest: ecuResetTest
 	$(UDS_DIR)/ecu_reset/utest/ecuResetTest.out
 
@@ -1020,6 +1043,7 @@ cleanHvacModuleTest:
 
 
 # AccessTimingParameter Unit tests
+runAccessTimingParameterTest: allPreProcess
 runAccessTimingParameterTest: accessTimingParameterTest
 	$(UDS_DIR)/access_timing_parameters/utest/accessTimingParameterTest.out
 
@@ -1638,22 +1662,5 @@ clean:
 	@echo "Cleaning up..."
 	rm -f $(FINAL)
 	rm -rf $(OBJ_DIR)
-	@for dir in $(UTEST_DIRS); do \
-		if [ -d $$dir ]; then \
-			find $$dir -name "*$(FILE_EXT_out)" -type f -exec rm -f {} +; \
-			echo "Removed *$(FILE_EXT_out) files from $$dir"; \
-			find $$dir -name "*$(FILE_EXT_o)" -type f -exec rm -f {} +; \
-			echo "Removed *$(FILE_EXT_o) files from $$dir"; \
-			find $$dir -name '*.gcno' -delete; \
-			find $$dir -name '*.gcda' -delete; \
-			find $$dir -name '*.gcov' -delete; \
-			find $$dir -name '*.info' -delete; \
-		fi \
-	done
-	find .. -name '*.gcno' -delete
-	find .. -name '*.gcda' -delete
-	find .. -name '*.gcov' -delete
-	find .. -name '*.info' -delete
-	find .. -name '*.out' -delete
-	find .. -name '*.o' -delete
 	if [ -d "./coverage" ]; then find ./coverage -name '*' -delete; fi
+	find . -type f \( -name "*data*" -o -iname "*dtc*" \) -delete
