@@ -1,7 +1,23 @@
 #!/bin/bash
 
+# This script automatically starts the API, Frontend, MCU, and ECUs in separate terminals
+# Jobs are executed with delays to prevent errors that occur when the API starts while the MCU is compiling
+# or when the MCU compilation overlaps with the ECU compilation
+
+# Execution Flow:
+# - API & Frontend start first
+# - MCU starts after 10 seconds, assuming the API has fully started
+# - ECUs (Battery, Engine, Doors, HVAC) start after 60 seconds, assuming the MCU has finished or is close to finishing
+
+# Important Notes:
+# - Entering your password when prompted in the terminals is crucial
+#   If you don’t, the compilation won’t start properly, and errors may occur
+# - The delays in the script help prevent these errors
+#   However, if the password is entered too late, the timing might be disrupted, leading to unexpected behavior
+# - The script automatically detects and opens available terminals (e.g., gnome-terminal, alacritty, xterm, rxvt)
+
 # Define the commands for the REST API terminal
-rest_api_command='
+restApiCommand='
 cd ../rest_api &&
 echo "Navigated to ../rest_api" &&
 sudo apt install -y python3-pip python3.8 python3.8-venv &&
@@ -26,7 +42,7 @@ exec bash
 '
 
 # Define the commands for the MCU terminal
-mcu_command='
+mcuCommand='
 cd ../mcu &&
 echo "Navigated to ../mcu" &&
 mkdir -p logs &&
@@ -43,7 +59,7 @@ exec ./main_mcu
 '
 
 # Define the commands for the BatteryModule terminal
-battery_module_command='
+batteryModuleCommand='
 cd ../ecu_simulation/BatteryModule &&
 echo "Navigated to ../ecu_simulation/BatteryModule" &&
 mkdir -p logs &&
@@ -58,7 +74,7 @@ exec ./main_battery
 '
 
 # Define the commands for the EngineModule terminal
-engine_module_command='
+engineModuleCommand='
 cd ../ecu_simulation/EngineModule &&
 echo "Navigated to ../ecu_simulation/EngineModule" &&
 mkdir -p logs &&
@@ -73,7 +89,7 @@ exec ./main_engine
 '
 
 # Define the commands for the DoorsModule terminal
-doors_module_command='
+doorsModuleCommand='
 cd ../ecu_simulation/DoorsModule &&
 echo "Navigated to ../ecu_simulation/DoorsModule" &&
 mkdir -p logs &&
@@ -88,7 +104,7 @@ exec ./main_doors
 '
 
 # Define the commands for the HVACModule terminal
-hvac_module_command='
+hvacModulecommand='
 cd ../ecu_simulation/HVACModule &&
 echo "Navigated to ../ecu_simulation/HVACModule" &&
 mkdir -p logs &&
@@ -103,7 +119,7 @@ exec ./main_hvac
 '
 
 # Define the commands for the Front End terminal
-front_end_command='
+frontendCommand='
 cd ../../front_end/carsdata &&
 echo "Navigated to ../front_end/carsdata" &&
 
@@ -230,48 +246,48 @@ terminals=(gnome-terminal alacritty xterm rxvt)
 # Run the REST API job in its own terminal
 echo "Starting REST API job..."
 (
-    run_in_terminal "$rest_api_command" "${terminals[@]}"
+    run_in_terminal "$restApiCommand" "${terminals[@]}"
 ) &
 
 # Run the MCU job in its own terminal
 echo "Starting MCU job..."
 (
     sleep 10
-    run_in_terminal "$mcu_command" "${terminals[@]}"
+    run_in_terminal "$mcuCommand" "${terminals[@]}"
 ) &
 
 # Run the BatteryModule job in its own terminal
 echo "Starting BatteryModule job..."
 (
     sleep 60
-    run_in_terminal "$battery_module_command" "${terminals[@]}"&
+    run_in_terminal "$batteryModuleCommand" "${terminals[@]}"&
 ) &
 
 # Run the EngineModule job in its own terminal
 echo "Starting EngineModule job..."
 (   
     sleep 60
-    run_in_terminal "$engine_module_command" "${terminals[@]}"
+    run_in_terminal "$engineModuleCommand" "${terminals[@]}"
 ) &
 
 # Run the DoorsModule job in its own terminal
 echo "Starting DoorsModule job..."
 (
     sleep 60
-    run_in_terminal "$doors_module_command" "${terminals[@]}"
+    run_in_terminal "$doorsModuleCommand" "${terminals[@]}"
 ) &
 
 # Run the HVACModule job in its own terminal
 echo "Starting HVACModule job..."
 (
     sleep 60
-    run_in_terminal "$hvac_module_command" "${terminals[@]}"
+    run_in_terminal "$hvacModuleCommand" "${terminals[@]}"
 ) &
 
 # Run the Front End job in its own terminal
 echo "Starting Front End job..."
 (
-    run_in_terminal "$front_end_command" "${terminals[@]}"
+    run_in_terminal "$frontendCommand" "${terminals[@]}"
 ) &
 
 # Wait for all background jobs to complete
