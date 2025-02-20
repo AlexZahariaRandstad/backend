@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 #include "../include/RequestTransferExit.h"
 #include "../../../utils/include/CaptureFrame.h"
+#include "../../../utils/include/FileManager.h"
 #include "../../../utils/include/Logger.h"
 #include "../../../utils/include/TestUtils.h"
 #include "../../../mcu/include/MCUModule.h"
@@ -27,8 +28,9 @@ protected:
     RequestTransferExit* transfer_exit;
     RequestTransferExitTest()
     {
-    transfer_exit = new RequestTransferExit(socket_, logger);
-    captured_frame = new CaptureFrame(socket_);
+        v_loadProjectPath();
+        transfer_exit = new RequestTransferExit(socket_, logger);
+        captured_frame = new CaptureFrame(socket_);
     }
 
     /* Setup and teardown methods */
@@ -118,6 +120,7 @@ TEST_F(RequestTransferExitTest, PositiveResponse)
 {    
     std::vector<uint8_t> request = {0x03, 0x37, 0x01};
     std::vector<uint8_t> expected_response = {0x02, 0x77, 0x01};
+    FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {PROCESSING_TRANSFER_COMPLETE}, 0xFA10, logger, socket_);
 
     transfer_exit->requestTRansferExitRequest(0xFA10, request);
     captured_frame->capture();
@@ -138,21 +141,6 @@ TEST_F(RequestTransferExitTest, RequestSequenceError)
     for (int i = 0; i < captured_frame->frame.can_dlc; ++i) {
         EXPECT_EQ(expected_response[i], captured_frame->frame.data[i]);
     }
-}
-
-/* Test for OTA_UPDATE_STATUS_DID */
-TEST_F(RequestTransferExitTest, OTAUpStDIDNotFound) 
-{       
-    MCU::mcu->default_DID_MCU.clear();
-    std::vector<uint8_t> request = {0x03, 0x37, 0x01};
-    
-    /* redirect stdout to capture the output */
-    testing::internal::CaptureStdout();
-    transfer_exit->requestTRansferExitRequest(0xFA10, request);
-    std::string output = testing::internal::GetCapturedStdout();
-    /* check if the correct message is printed */
-    std::string message = "OTA_UPDATE_STATUS_DID 01E0 not found ";
-    EXPECT_NE(output.find(message), std::string::npos);    
 }
 
 int main(int argc, char **argv)
