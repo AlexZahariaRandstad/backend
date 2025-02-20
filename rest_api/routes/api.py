@@ -169,12 +169,22 @@ def get_logs():
     response = log_memory
     return jsonify({'logs': response})
 
+@api_bp.route('/drive_update_data', defaults={'parameter': None}, methods=['GET'], strict_slashes=False)
+@api_bp.route('/drive_update_data/<string:parameter>', methods=['GET'], strict_slashes=False)
+def update_drive_data(parameter):
+    """ curl -X GET http://127.0.0.1:5000/api/drive_update_data/mcu """
+    if parameter:
+        parameter = parameter.upper()
+        drive_data_json = gDrive.getDriveData_from_ECU(parameter)
+        return jsonify(drive_data_json)
+    else:
+        drive_data_json = gDrive.getDriveData()
 
-@api_bp.route('/drive_update_data', methods=['GET'])
-def update_drive_data():
-    """ curl -X GET http://127.0.0.1:5000/api/drive_update_data """
-    drive_data_json = gDrive.getDriveData()
-    return jsonify(drive_data_json)
+    if drive_data_json:
+        return jsonify(drive_data_json)
+    else:
+        return jsonify({'error': 'No data found'}), 404
+    
 
 
 @api_bp.route('/authenticate', methods=['GET'])
