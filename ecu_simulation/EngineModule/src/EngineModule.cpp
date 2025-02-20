@@ -71,7 +71,7 @@ EngineModule::~EngineModule()
 void EngineModule::fetchEngineData()
 {
     /* Path to engine data file */
-    std::string strFilePath = "engine_data.txt";
+    std::string strFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/engine_data.txt";
 
     /* Generate random values for each DID */
     std::unordered_map<uint16_t, std::string> updated_values;
@@ -158,7 +158,7 @@ void EngineModule::writeDataToFile()
     }
 
     /* Check if old_engine_data.txt exists */
-    std::string strOldFilePath = "old_engine_data.txt";
+    std::string strOldFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/EngineModule/old_engine_data.txt";
     std::ifstream ifs_Infile(strOldFilePath);
 
     if (ifs_Infile.is_open())
@@ -226,6 +226,7 @@ void EngineModule::checkDTC()
     }
     else
     {
+        LOG_ERROR(engineModuleLogger->GET_LOGGER(), "Failed to create dtcs.txt file.");
         ifs_Infile.close();
     }
     /* Read the map with DIDs from the file */
