@@ -204,7 +204,7 @@ class GDriveAPI:
                                          for file in folder_data['files'])
 
         return json_file
-    
+
     def getDriveData_from_ECU(self, file):
 
         json_files = {"versions": []}
@@ -220,7 +220,7 @@ class GDriveAPI:
             folder_data = self.__getFilesFromFolder(DRIVE_ECU_DOORS_SW_VERSIONS_FILE)
         elif file == "HVAC":
             folder_data = self.__getFilesFromFolder(DRIVE_ECU_HVAC_SW_VERSIONS_FILE)
-        
+
         if folder_data :
             for file in folder_data['files']:
                 

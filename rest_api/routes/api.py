@@ -190,6 +190,7 @@ def get_logs():
     response = log_memory
     return jsonify({'logs': response})
 
+
 @api_bp.route('/drive_update_data', defaults={'parameter': None}, methods=['GET'], strict_slashes=False)
 @api_bp.route('/drive_update_data/<string:parameter>', methods=['GET'], strict_slashes=False)
 def update_drive_data(parameter):
@@ -205,7 +206,6 @@ def update_drive_data(parameter):
         return jsonify(drive_data_json)
     else:
         return jsonify({'error': 'No data found'}), 404
-    
 
 
 @api_bp.route('/authenticate', methods=['GET'])
