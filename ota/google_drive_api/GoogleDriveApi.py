@@ -223,7 +223,7 @@ class GDriveAPI:
 
         if folder_data :
             for file in folder_data['files']:
-                
+
                 json_file = {
                     'name': file['name'],
                     'id': file['id'],
