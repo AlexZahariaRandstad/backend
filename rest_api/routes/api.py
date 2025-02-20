@@ -21,10 +21,10 @@ from actions.access_timing_action import *  # noqa: E402
 from actions.ecu_reset import Reset  # noqa: E402
 from actions.security_decorator import *  # noqa: E402
 from utils.input_validation import validate_update_request  # noqa: E402
-from utils.decorators import role_required  # noqa: E402
 from config import *  # noqa: E402
 from werkzeug.exceptions import HTTPException  # noqa: E402
 from actions.dtc_info import DTC_STATUS_BITS  # noqa: E402
+from utils.frontendLogs import uploadFrontendLogs  # noqa: E402
 
 api_bp = Blueprint('api', __name__)
 
@@ -63,6 +63,16 @@ def update_to_version():
     return jsonify(response)
 
 
+@api_bp.route('/upload_logs', methods=['POST'])
+def upload_logs():
+    if 'file' not in request.files:
+        return jsonify({'error': 'no file in request  #!@#!@'})
+    file = request.files['file']
+    file.save(f'./utils/log/{file.filename}')
+    uploadFrontendLogs()
+    return jsonify({'message': 'SUCCESSSSS #!@#!@'})
+
+
 @api_bp.route('/verify_software', methods=['POST'])
 def verify_software():
     data = request.get_json()
@@ -71,6 +81,7 @@ def verify_software():
     response = routine.verify_software(id=ecu_id)
     return jsonify(response)
 
+
 @api_bp.route('/erase_memory', methods=['POST'])
 def erase_memory():
     data = request.get_json()
@@ -78,7 +89,17 @@ def erase_memory():
     address = data.get('address')
     nrBytes = data.get('nrBytes')
     routine = Routine()
-    response = routine.erase_memory_from_address(id=ecu_id,address=address, nrBytes=nrBytes)
+    response = routine.erase_memory_from_address(
+        id=ecu_id, address=address, nrBytes=nrBytes)
+    return jsonify(response)
+
+
+@api_bp.route('/read_info_mcu', methods=['GET'])
+@requires_auth
+def read_info_mcu():
+    reader = ReadInfo()
+    item = request.args.get('item', default=None, type=str)
+    response = reader.read_from_mcu(item)
     return jsonify(response)
 
 
@@ -211,24 +232,24 @@ def read_dtc_info():
         try:
             ecu_id = int(ecu_id_str, 16)
         except ValueError:
-            errors.append(
-                {"error": "Invalid ecu", "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
+            errors.append({"error": "Invalid ecu",
+                           "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
 
         requester = RequestIdAction()
         if not requester.check_ecu_up(ecu_id):
-            errors.append(
-                {"error": "Invalid ecu", "details": f"Ecu {hex(ecu_id)} is either not supported or not running."})
+            errors.append({"error": "Invalid ecu",
+                           "details": f"Ecu {hex(ecu_id)} is either not supported or not running."})
 
         subfunc = request.args.get('subfunc', default=1, type=int)
         if subfunc not in [1, 2]:
             errors.append({"error": "Invalid sub-function",
-                          "details": f"Sub-function {subfunc} is not supported"})
+                           "details": f"Sub-function {subfunc} is not supported"})
         dtc_mask_bits = request.args.getlist('dtc_mask_bits')
         invalid_bits = [bit for bit in dtc_mask_bits if bit not in DTC_STATUS_BITS]
 
         if invalid_bits:
             errors.append({"error": "Invalid DTC mask bits",
-                          "details": f"The following bits are not supported: {invalid_bits}"})
+                           "details": f"The following bits are not supported: {invalid_bits}"})
 
         if errors:
             return jsonify({"errors": errors})
@@ -238,10 +259,12 @@ def read_dtc_info():
 
     except HTTPException as http_err:
         log_info_message(logger, f"HTTP Exception occurred: {http_err}")
-        return jsonify({"error": "HTTP Exception occurred", "details": str(http_err)}), http_err.code
+        return jsonify({"error": "HTTP Exception occurred",
+                        "details": str(http_err)}), http_err.code
     except Exception as err:
         log_info_message(logger, f"An unexpected error occurred: {err}")
-        return jsonify({"error": "An unexpected error occurred", "details": str(err)}), 500
+        return jsonify({"error": "An unexpected error occurred",
+                        "details": str(err)}), 500
 
 
 @api_bp.route('/clear_dtc_info', methods=['POST'])
@@ -255,13 +278,13 @@ def clear_dtc_info():
         try:
             ecu_id = int(ecu_id_str, 16)
         except ValueError:
-            errors.append(
-                {"error": "Invalid ecu", "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
+            errors.append({"error": "Invalid ecu",
+                           "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
 
         requester = RequestIdAction()
         if not requester.check_ecu_up(ecu_id):
-            errors.append(
-                {"error": "Invalid ecu", "details": f"Ecu {hex(ecu_id)} is either not supported or not running."})
+            errors.append({"error": "Invalid ecu",
+                           "details": f"Ecu {hex(ecu_id)} is either not supported or not running."})
 
         dtc_group = data.get('dtc_group')
         if errors:
@@ -329,15 +352,15 @@ def access_timing():
         try:
             ecu_id = int(ecu_id_str, 16)
         except ValueError:
-            errors.append(
-                {"error": "Invalid ecu", "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
+            errors.append({"error": "Invalid ecu",
+                           "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
 
         requester = RequestIdAction()
         mcu_id = int(response_req_json.get("mcu_id"), 16)
 
         if not requester.check_ecu_up(ecu_id) and ecu_id != mcu_id:
-            errors.append(
-                {"error": "Invalid ecu", "details": f"Ecu {hex(ecu_id)} is either not supported or not running."})
+            errors.append({"error": "Invalid ecu",
+                           "details": f"Ecu {hex(ecu_id)} is either not supported or not running."})
 
         if errors:
             return jsonify({"errors": errors})
@@ -380,15 +403,15 @@ def write_timing():
         try:
             ecu_id = int(ecu_id_str, 16)
         except ValueError:
-            errors.append(
-                {"error": "Invalid ecu", "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
+            errors.append({"error": "Invalid ecu",
+                           "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
 
         requester = RequestIdAction()
         mcu_id = int(response_req_json.get("mcu_id"), 16)
 
         if not requester.check_ecu_up(ecu_id) and ecu_id != mcu_id:
-            errors.append(
-                {"error": "Invalid ecu", "details": f"Ecu {hex(ecu_id)} is either not supported or not running."})
+            errors.append({"error": "Invalid ecu",
+                           "details": f"Ecu {hex(ecu_id)} is either not supported or not running."})
 
         writer = WriteAccessTiming()
         if sub_funct == 2:
@@ -411,7 +434,7 @@ def write_timing():
             }
             result = writer._write_timing_info(sub_funct, ecu_id, timing_values)
         return jsonify(result)
-    
+
     except CustomError as e:
         return jsonify(e.message), 400
 
@@ -421,12 +444,12 @@ def write_timing():
 
 @api_bp.route('ota_status', methods=['POST'])
 def ota_status():
-   
+
     data = request.get_json()
-  
+
     # Parse the hex value from the JSON input
     ecu_id = data.get('ecu_id')
-    
+
     if ecu_id is None:
         return jsonify({"error": "Missing hex_value"}), 400
 
@@ -452,6 +475,7 @@ def rollback_software():
     except Exception as e:
         return jsonify({"Error": str(e)}), 500
 
+
 @api_bp.route('/ota_init', methods=['POST'])
 def ota_init():
     session = SessionManager()
@@ -476,6 +500,7 @@ def ota_init():
 
     except Exception as e:
         return jsonify({"Error": str(e)}), 500
+
 
 @api_bp.route('/write_to_file', methods=['POST'])
 def write_to_file():
@@ -516,7 +541,7 @@ def activate_software():
     except Exception as e:
         return jsonify({"Error": str(e)}), 500
 
-      
+
 @api_bp.route('/sync_ota_status', methods=['POST'])
 def sync_ota_status():
     data = request.get_json()
@@ -526,7 +551,7 @@ def sync_ota_status():
     response = updater.change_ota_state(ecu_id=ecu_id, ota_status_value=ota_state)
     return jsonify(response)
 
-  
+
 @api_bp.route('/transfer_data_to_ecu', methods=['POST'])
 def transfer_data_to_ecu():
     data = request.get_json()
@@ -534,25 +559,29 @@ def transfer_data_to_ecu():
     address = data.get('address')
     data_bytes = data.get('data_bytes')
     updater = Updates()
-    response = updater.transfer_data_to_ecu(ecu_id=ecu_id, address=address, data=data_bytes)
+    response = updater.transfer_data_to_ecu(
+        ecu_id=ecu_id, address=address, data=data_bytes)
     return jsonify(response)
+
 
 @api_bp.route('/read_info', methods=['GET'])
 @requires_auth
 def read_info():
     item = request.args.get('item', default=None, type=str)
-    
+
     ecu_id_str = request.args.get('ecu_id', default=None, type=str)
     try:
         ecu_id = int(ecu_id_str, 16)
     except ValueError:
-        return jsonify({"error": "Invalid ecu", "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
-    
+        return jsonify({"error": "Invalid ecu",
+                        "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
+
     requester = RequestIdAction()
     if not requester.check_ecu_up(ecu_id):
-        return jsonify({"error": "Invalid ecu", "details": f"Ecu {ecu_id_str} is either not supported or not running."})
-    
-    reader = ReadInfo()     
+        return jsonify({"error": "Invalid ecu",
+                        "details": f"Ecu {ecu_id_str} is either not supported or not running."})
+
+    reader = ReadInfo()
     response = reader.read_info(item, ecu_id)
     return jsonify(response)
 
@@ -566,12 +595,14 @@ def write_info():
     try:
         ecu_id = int(ecu_id_str, 16)
     except ValueError:
-        return jsonify({"error": "Invalid ecu", "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
-    
+        return jsonify({"error": "Invalid ecu",
+                        "details": f"Ecu {ecu_id_str} is not a valid hexadecimal value"})
+
     requester = RequestIdAction()
     if not requester.check_ecu_up(ecu_id):
-        return jsonify({"error": "Invalid ecu", "details": f"Ecu {ecu_id_str} is either not supported or not running."})
-    
+        return jsonify({"error": "Invalid ecu",
+                        "details": f"Ecu {ecu_id_str} is either not supported or not running."})
+
     writer = WriteInfo(data)
     response = writer.write_data(ecu_id, data)
     return jsonify(response)

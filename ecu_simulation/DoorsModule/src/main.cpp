@@ -6,14 +6,10 @@
 #include "Globals.h"
 
 int main() {
-    loadProjectPathForECU();
-    #ifdef UNIT_TESTING_MODE
-    doorsModuleLogger = new Logger;
-    #else
+    v_loadProjectPath();
     doorsModuleLogger = new Logger("doorsModuleLogger", std::string(PROJECT_PATH) + "/backend/ecu_simulation/DoorsModule/logs/doorsModuleLogger.log");
-    #endif /* UNIT_TESTING_MODE */
     doors = new DoorsModule();
-    doors->_ecu->stopProcess("main_doors");
+    stopProcess("main_doors");
     std::thread receiveFrThread([]()
                                { doors->_ecu->startFrames(); });
     sleep(200);

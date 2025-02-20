@@ -20,6 +20,7 @@ std::unordered_map<uint16_t, std::vector<uint8_t>> BatteryModule::default_DID_ba
         {0x01D0, {0}},   /* State of Charge */
         {0x01E0, {0}},   /* Temperature (C) */
         {0x01F0, {0}},   /* Life cycle */
+        {ROLLBACK_AVAILABLE_DID, {0}}, /* Flag indicating if rollback is available */
         {OTA_UPDATE_STATUS_DID, {0}},   /* OTA Status */
 #ifdef SOFTWARE_VERSION
         {SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID, {static_cast<uint8_t>(SOFTWARE_VERSION)}}
@@ -29,6 +30,7 @@ std::unordered_map<uint16_t, std::vector<uint8_t>> BatteryModule::default_DID_ba
 };
 const std::vector<uint16_t> BatteryModule::writable_Battery_DID =
 {
+    ROLLBACK_AVAILABLE_DID,
     OTA_UPDATE_STATUS_DID,
     SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID
 };
@@ -79,14 +81,14 @@ std::string BatteryModule::exec(const char *cmd, const char *mode)
 void BatteryModule::parseBatteryInfo(const std::string &data, float &energy, float &voltage, float &percentage, std::string &state)
 {
     std::istringstream stream(data);
-    std::string line;
+    std::string strLine;
     std::unordered_map<uint16_t, std::string> updated_values;
 
-    while (std::getline(stream, line))
+    while (std::getline(stream, strLine))
     {
-        if (line.find("energy:") != std::string::npos)
+        if (strLine.find("energy:") != std::string::npos)
         {
-            energy = std::stof(line.substr(line.find(":") + 1));
+            energy = std::stof(strLine.substr(strLine.find(":") + 1));
             uint8_t energy_value = static_cast<uint8_t>(energy);
             std::string energy_str = std::to_string(energy_value);
             /* Add a leading '0' if the string length is odd to ensure pairs of two characters */
@@ -99,14 +101,14 @@ void BatteryModule::parseBatteryInfo(const std::string &data, float &energy, flo
                 energy_grouped += energy_str.substr(i, 2) + " ";
             }
             int decimal_value = std::stoi(energy_grouped);
-            std::stringstream data_ss;
-            data_ss << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << decimal_value;
-            energy_grouped = data_ss.str();
+            std::stringstream sstrData;
+            sstrData << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << decimal_value;
+            energy_grouped = sstrData.str();
             updated_values[0x01A0] = energy_grouped;
         }
-        else if (line.find("voltage:") != std::string::npos)
+        else if (strLine.find("voltage:") != std::string::npos)
         {
-            voltage = std::stof(line.substr(line.find(":") + 1));
+            voltage = std::stof(strLine.substr(strLine.find(":") + 1));
             uint8_t voltage_value = static_cast<uint8_t>(voltage);
             std::string voltage_str = std::to_string(voltage_value);
             if (voltage_str.size() % 2 != 0) {
@@ -117,24 +119,24 @@ void BatteryModule::parseBatteryInfo(const std::string &data, float &energy, flo
                 voltage_grouped += voltage_str.substr(i, 2) + " ";
             }
             int decimal_value = std::stoi(voltage_grouped);
-            std::stringstream data_ss;
-            data_ss << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << decimal_value;
-            voltage_grouped = data_ss.str();
+            std::stringstream sstrData;
+            sstrData << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << decimal_value;
+            voltage_grouped = sstrData.str();
             updated_values[0x01B0] = voltage_grouped;
         }
-        else if (line.find("percentage:") != std::string::npos)
+        else if (strLine.find("percentage:") != std::string::npos)
         {
-            percentage = std::stof(line.substr(line.find(":") + 1));
+            percentage = std::stof(strLine.substr(strLine.find(":") + 1));
             uint16_t percentage_value = static_cast<uint16_t>(percentage);
-            std::stringstream data_ss;
-            data_ss << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << percentage_value;
-            std::string percentage_str = data_ss.str();
+            std::stringstream sstrData;
+            sstrData << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << percentage_value;
+            std::string percentage_str = sstrData.str();
             updated_values[0x01C0] = percentage_str;
         }
-        else if (line.find("state:") != std::string::npos)
+        else if (strLine.find("state:") != std::string::npos)
         {
-            size_t pos = line.find(":");
-            state = line.substr(pos + 1);
+            size_t pos = strLine.find(":");
+            state = strLine.substr(pos + 1);
             state = state.substr(state.find_first_not_of(" \t"));
 
             /* default: unknown */
@@ -172,29 +174,29 @@ void BatteryModule::parseBatteryInfo(const std::string &data, float &energy, flo
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(0, 100);
 
-    for (auto& [did, data] : default_DID_battery)
+    for (auto& [u16Did, data] : default_DID_battery)
     {
-        if(did == 0x01E0 || did == 0x01F0)
+        if(u16Did == 0x01E0 || u16Did == 0x01F0)
         {
-            std::stringstream data_ss;
+            std::stringstream sstrData;
             for (auto& byte : data)
             {
                 byte = dist(gen);  
                 /* Generate a random value between 0 and 255 */
-                data_ss << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << static_cast<int>(byte) << " ";
+                sstrData << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << static_cast<int>(byte) << " ";
             }
-            updated_values[did] = data_ss.str();
+            updated_values[u16Did] = sstrData.str();
         }
     }
 
     /* Path to battery data file */
-    std::string file_path = "battery_data.txt";
+    std::string strFilePath = "battery_data.txt";
 
     /* Read the current file contents into memory */
-    std::ifstream infile(file_path);
+    std::ifstream ifs_Infile(strFilePath);
     std::stringstream buffer;
-    buffer << infile.rdbuf();
-    infile.close();
+    buffer << ifs_Infile.rdbuf();
+    ifs_Infile.close();
 
     std::string file_contents = buffer.str();
     std::istringstream file_stream(file_contents);
@@ -223,7 +225,7 @@ void BatteryModule::parseBatteryInfo(const std::string &data, float &energy, flo
     }
 
     /* Write the updated contents back to the file */
-    std::ofstream outfile(file_path);
+    std::ofstream outfile(strFilePath);
     outfile << updated_file_contents;
     outfile.close();
 }
@@ -284,61 +286,74 @@ int BatteryModule::getBatterySocket() const
 
 void BatteryModule::writeDataToFile()
 {
+    std::string strFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/battery_data.txt";
+    
+    /* Retrieve existing values before overwriting the file */
+    std::unordered_map<uint16_t, std::string> mapU16Str_ExistingValues = FileManager::getExistingDIDValues(strFilePath);
+
     /* Insert the default DID values in the file */
-    std::ofstream outfile("battery_data.txt");
+    std::ofstream outfile(strFilePath);
     if (!outfile.is_open())
     {
         throw std::runtime_error("Failed to open file: battery_data.txt");
     }
 
     /* Check if old_battery_data.txt exists */
-    std::string old_file_path = "old_battery_data.txt";
-    std::ifstream infile(old_file_path);
+    std::string strOldFilePath = "old_battery_data.txt";
+    std::ifstream ifs_Infile(strOldFilePath);
 
-    if (infile.is_open())
+    if (ifs_Infile.is_open())
     {
         /* Read the current file contents into memory */
         std::stringstream buffer;
         /* Read the entire file into the buffer */
-        buffer << infile.rdbuf();
-        infile.close();
+        buffer << ifs_Infile.rdbuf();
+        ifs_Infile.close();
 
         /* Store the original content */
         std::string original_file_contents = buffer.str();
 
-        /* Write the content of old_mcu_data.txt into mcu_data.txt */
+        /* Write the content of old_battery_data.txt into battery_data.txt */
         outfile << original_file_contents;
 
         /* Delete the old file after reading its contents */
-        std::remove(old_file_path.c_str());
-        outfile.close();
+        std::remove(strOldFilePath.c_str());
     }
     else
     {
-        for (const auto& [data_identifier, data] : default_DID_battery)
+        /* Write default DID values to battery_data.txt, keeping ROLLBACK_AVAILABLE_DID */
+        for (const auto& [u16DataIdentifier, data] : default_DID_battery)
         {
-            outfile << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << data_identifier << " ";
-            for (uint8_t byte : data)
+            outfile << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << u16DataIdentifier << " ";
+
+            if (u16DataIdentifier == ROLLBACK_AVAILABLE_DID && mapU16Str_ExistingValues.find(u16DataIdentifier) != mapU16Str_ExistingValues.end())
             {
-                outfile << std::hex << std::setw(1) << std::setfill('0') << static_cast<int>(byte) << " ";
+                outfile << mapU16Str_ExistingValues[u16DataIdentifier] << "\n";
             }
-            outfile << "\n";
+            else
+            {
+                for (uint8_t byte : data)
+                {
+                    outfile << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+                }
+                outfile << "\n";
+            }
         }
-        outfile.close();
-        fetchBatteryData("r");
     }
+    outfile.close();
+    fetchBatteryData("r");
 }
 
 void BatteryModule::checkDTC()
 {
     /* Check if dtcs.txt exists */
-    std::string dtc_file_path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/dtcs.txt";
-    std::string battery_file_path = std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/battery_data.txt";
-    std::ifstream infile(dtc_file_path);
+    std::string strDtcFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/dtcs.txt";
+    std::string strBatteryFilePath = std::string(PROJECT_PATH) + "/backend/ecu_simulation/BatteryModule/battery_data.txt";
+    std::ifstream ifs_Infile(strDtcFilePath);
 
-    if (!infile.is_open())
+    if (!ifs_Infile.is_open())
     {
-        std::ofstream outfile(dtc_file_path);
+        std::ofstream outfile(strDtcFilePath);
         if (outfile.is_open())
         {
             LOG_INFO(batteryModuleLogger->GET_LOGGER(), "dtcs.txt file created successfully.");
@@ -352,13 +367,13 @@ void BatteryModule::checkDTC()
     }
     else
     {
-        infile.close();
+        ifs_Infile.close();
     }
     /* Read the map with DIDs from the file */
-    std::unordered_map<uint16_t, std::vector<uint8_t>> current_DID_value = FileManager::readMapFromFile(battery_file_path);
+    std::unordered_map<uint16_t, std::vector<uint8_t>> current_DID_value = FileManager::readMapFromFile(strBatteryFilePath);
 
     /* Voltage DTC */
-    FileManager::writeDTC(current_DID_value, dtc_file_path, 0x01B0, 12, 13, "P01B0 24");
+    FileManager::writeDTC(current_DID_value, strDtcFilePath, 0x01B0, 12, 13, "P01B0 24");
     /* Temperature DTC */
-    FileManager::writeDTC(current_DID_value, dtc_file_path, 0x01E0, 21, 27, "P01E0 24");
+    FileManager::writeDTC(current_DID_value, strDtcFilePath, 0x01E0, 21, 27, "P01E0 24");
 }

@@ -108,16 +108,12 @@ namespace MCU
          * 
          */
         void checkSwVersion();
+
         /**
          * @brief This function generates random values for all DID entries defined in the default_DID_MCU map
          * 
          */
         void fetchMCUData();
-        /**
-         * @brief This function stops all the processes that running ./main_mcu, except the current one.
-         * 
-         */
-        void stopProcess();
  
     private:
         bool is_running;

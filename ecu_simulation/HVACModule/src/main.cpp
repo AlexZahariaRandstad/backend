@@ -7,15 +7,11 @@
 
 int main()
 {
-    loadProjectPathForECU();
-    #ifdef UNIT_TESTING_MODE
-    hvacModuleLogger = new Logger;
-    #else
+    v_loadProjectPath();
     hvacModuleLogger = new Logger("hvacModuleLogger", std::string(PROJECT_PATH) + "/backend/ecu_simulation/HVACModule/logs/hvacModuleLogger.log");
-    #endif
 
     hvac = new HVACModule();
-    hvac->_ecu->stopProcess("main_hvac");
+    stopProcess("main_hvac");
     hvac->printHvacInfo();
     std::thread receiveFrThread([]()
                                { hvac->_ecu->startFrames(); });

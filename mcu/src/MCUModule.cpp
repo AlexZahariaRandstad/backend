@@ -24,6 +24,7 @@ namespace MCU
             {0xF17F, {0x45, 0x43, 0x55, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30, 0x31, 0x32}},
             /** System Supplier ECU Hardware Number */
             {0xF18C, {0x48, 0x57, 0x30, 0x30, 0x31, 0x37, 0x38, 0x35, 0x32, 0x30, 0x32, 0x32}},
+            {ROLLBACK_AVAILABLE_DID, {0}}, /* Flag indicating if rollback is available */
             {OTA_UPDATE_STATUS_DID, {IDLE}},
 #ifdef SOFTWARE_VERSION
             {SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID, {static_cast<uint8_t>(SOFTWARE_VERSION)}},
@@ -65,6 +66,7 @@ namespace MCU
         0xF1A8,
         /* System Calibration Verification Number (CVN) */
         0xF1A9,
+        ROLLBACK_AVAILABLE_DID,
         OTA_UPDATE_STATUS_DID,
         SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID
     };
@@ -164,7 +166,7 @@ namespace MCU
     void MCUModule::fetchMCUData()
     {
         /* Path to mcu data file */
-        std::string file_path = "mcu_data.txt";
+        std::string strFilePath = "mcu_data.txt";
 
         /* Generate random values for each DID */
         std::unordered_map<uint16_t, std::string> updated_values;
@@ -172,26 +174,36 @@ namespace MCU
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> dist(0, 255);
 
-        for (auto& [did, data] : default_DID_MCU)
+        /* Retrieve existing values from the file */
+        std::unordered_map<uint16_t, std::string> mapU16Str_ExistingValues = FileManager::getExistingDIDValues(strFilePath);
+        
+        for (auto& [u16Did, data] : default_DID_MCU)
         {
-            std::stringstream data_ss;
-            for (auto& byte : data)
+            if (mapU16Str_ExistingValues.find(u16Did) != mapU16Str_ExistingValues.end() && u16Did == ROLLBACK_AVAILABLE_DID) 
             {
-                if(did != SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID && did != OTA_UPDATE_STATUS_DID)
-                {
-                    byte = dist(gen);  
-                }
-                /* Generate a random value between 0 and 255 */
-                data_ss << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << static_cast<int>(byte) << " ";
+                updated_values[u16Did] = mapU16Str_ExistingValues[u16Did];
             }
-            updated_values[did] = data_ss.str();
+            else 
+            {
+                std::stringstream sstrData;
+                for (auto& byte : data)
+                {
+                    if(u16Did != SYSTEM_SUPPLIER_ECU_SOFTWARE_VERSION_NUMBER_DID && u16Did != OTA_UPDATE_STATUS_DID)
+                    {
+                        byte = dist(gen);  
+                    }
+                    /* Generate a random value between 0 and 255 */
+                    sstrData << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << static_cast<int>(byte) << " ";
+                }
+                updated_values[u16Did] = sstrData.str();
+            }
         }
 
         /* Read the current file contents into memory */
-        std::ifstream infile(file_path);
+        std::ifstream ifs_Infile(strFilePath);
         std::stringstream buffer;
-        buffer << infile.rdbuf();
-        infile.close();
+        buffer << ifs_Infile.rdbuf();
+        ifs_Infile.close();
 
         std::string file_contents = buffer.str();
         std::istringstream file_stream(file_contents);
@@ -214,7 +226,7 @@ namespace MCU
         }
 
         /* Write the updated contents back to the file */
-        std::ofstream outfile(file_path);
+        std::ofstream outfile(strFilePath);
         outfile << updated_file_contents;
         outfile.close();
 
@@ -224,25 +236,29 @@ namespace MCU
 
     void MCUModule::writeDataToFile()
     {
-        std::string file_path = std::string(PROJECT_PATH) + "/backend/mcu/mcu_data.txt";
+        std::string strFilePath = std::string(PROJECT_PATH) + "/backend/mcu/mcu_data.txt";
+        
+        /* Retrieve existing values before overwriting the file */
+        std::unordered_map<uint16_t, std::string> mapU16Str_ExistingValues = FileManager::getExistingDIDValues(strFilePath);
+
         /* Insert the default DID values in the file */
-        std::ofstream outfile(file_path);
+        std::ofstream outfile(strFilePath);
         if (!outfile.is_open())
         {
             throw std::runtime_error("Failed to open file: mcu_data.txt");
         }
 
         /* Check if old_mcu_data.txt exists */
-        std::string old_file_path = "old_mcu_data.txt";
-        std::ifstream infile(old_file_path);
+        std::string strOldFilePath = "old_mcu_data.txt";
+        std::ifstream ifs_Infile(strOldFilePath);
 
-        if (infile.is_open())
+        if (ifs_Infile.is_open())
         {
             /* Read the current file contents into memory */
             std::stringstream buffer;
             /* Read the entire file into the buffer */
-            buffer << infile.rdbuf();
-            infile.close();
+            buffer << ifs_Infile.rdbuf();
+            ifs_Infile.close();
 
             /* Store the original content */
             std::string original_file_contents = buffer.str();
@@ -251,19 +267,27 @@ namespace MCU
             outfile << original_file_contents;
 
             /* Delete the old file after reading its contents */
-            std::remove(old_file_path.c_str());
+            std::remove(strOldFilePath.c_str());
         }
         else
         {
-            /* Write the default DID values to mcu_data.txt */
-            for (const auto& [data_identifier, data] : default_DID_MCU)
+            /* Write default DID values to mcu_data.txt, keeping ROLLBACK_AVAILABLE_DID */
+        for (const auto& [u16DataIdentifier, data] : default_DID_MCU)
             {
-                outfile << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << data_identifier << " ";
-                for (uint8_t byte : data)
+                outfile << std::hex << std::setw(4) << std::setfill('0') << std::uppercase << u16DataIdentifier << " ";
+
+                if (u16DataIdentifier == ROLLBACK_AVAILABLE_DID && mapU16Str_ExistingValues.find(u16DataIdentifier) != mapU16Str_ExistingValues.end())
                 {
-                    outfile << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+                    outfile << mapU16Str_ExistingValues[u16DataIdentifier] << "\n";
                 }
-                outfile << "\n";
+                else
+                {
+                    for (uint8_t byte : data)
+                    {
+                        outfile << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+                    }
+                    outfile << "\n";
+                }
             }
         }
         outfile.close();
@@ -328,50 +352,5 @@ namespace MCU
         LOG_INFO(MCULogger->GET_LOGGER(), "Software has been changed from version {:x} to version {:x}.", previous_sw_version, static_cast<uint8_t>(SOFTWARE_VERSION));
         std::vector<uint8_t> temp_vector = {static_cast<uint8_t>(SOFTWARE_VERSION)};
         memory_manager_instance->writeToAddress(temp_vector);
-    }
-
-    void MCUModule::stopProcess()
-    {
-        /* Use popen to capture the output of the command */
-        FILE* fp = popen("pgrep -f './main_mcu' | grep -v 'pgrep' | wc -l", "r");
-        if (fp == nullptr) {
-            std::cerr << "Failed to run command" << std::endl;
-            return;
-        }
-
-        int count = 0;
-        /* Read the output of the command and check if it is valid */
-        if (fscanf(fp, "%d", &count) != 1) {
-            std::cerr << "Failed to read process count" << std::endl;
-            pclose(fp);
-            return;
-        }
-        pclose(fp);
-
-        /* Loop while there are more than 2 processes running */
-        while (count > 2) {
-            std::cout << "More than one process found. Killing old instances..." << std::endl;
-
-            /* Kill the oldest process */
-            int result = system("pkill -o -f './main_mcu'");
-            if (result == 0) {
-                std::cout << "Old process terminated successfully." << std::endl;
-            } else {
-                std::cerr << "Failed to terminate old process." << std::endl;
-            }
-
-            /* Reload the process count after killing one process */
-            fp = popen("pgrep -f './main_mcu' | wc -l", "r");
-            if (fp == nullptr) {
-                std::cerr << "Failed to run command" << std::endl;
-                return;
-            }
-            if (fscanf(fp, "%d", &count) != 1) {
-                std::cerr << "Failed to read process count" << std::endl;
-                pclose(fp);
-                return;
-            }
-            pclose(fp);
-        }
     }
 }
