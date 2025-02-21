@@ -69,6 +69,8 @@ HVAC_DIR_TEST = ../ecu_simulation/HVACModule/test
 all:
 	$(MAKE) -C ../config init
 
+allPreProcess:
+	$(MAKE) -C ../config init
 #----------------------------------------------------MCU MODULE-----------------------------------------------------
 
 # Object files
@@ -485,15 +487,8 @@ allTests: mcuModuleTest batteryModuleTest engineModuleTest doorsModuleTest hvacM
 		  testerPresentTest routineControlTest transferDataTest requestDownloadTest ecuResetTest negativeResponseTest \
 		  accessTimingParameterTest receiveFramesTestUtils ecuTest readMemoryByAddressTest
 
-# Compile and Run all unit tests
-runAllTests: runMcuModuleTest runBatteryModuleTest runEngineModuleTest runDoorsModuleTest runHvacModuleTest \
-             runHandleFramesTest runReceiveFramesTest runGenerateFramesTest runLoggerTest runMemoryManagerTest \
-             runCreateInterfaceTest runDiagnosticSessionControlTest runWriteDataByIdentifierTest \
-             runReadDataByIdentifierTest runRequestTransferExitTest runReadDtcTest runClearDtcTest \
-             runRequestUpdateStatusTest runSecurityAccessTest runTesterPresentTest runRoutineControlTest \
-             runTransferDataTest runRequestDownloadTest runEcuResetTest runNegativeResponseTest \
-             runAccessTimingParameterTest runReceiveFramesTestUtils runEcuTest runReadMemoryByAddressTest
-
+# Compile and Run all unit tests 
+runAllTests: allPreProcess runSecurityAccessTest
 # Clean all unit tests
 cleanAllTests: cleanMcuModuleTest cleanBatteryModuleTest cleanEngineModuleTest cleanDoorsModuleTest cleanHvacModuleTest \
                cleanHandleFramesTest cleanReceiveFramesTest cleanGenerateFramesTest cleanLoggerTest cleanMemoryManagerTest \
