@@ -247,6 +247,29 @@ void RequestDownloadService::downloadInEcu(int id, int memory_address)
     }
 }
 
+void RequestDownloadService::downloadInEcuOnRpi(int id, int memory_address) {
+    int receiver_id = id & 0xFF;
+    int new_id = 0x1000 + receiver_id;
+    
+    LOG_INFO(RDSlogger.GET_LOGGER(), "Map memory in ECU and transfer data");
+
+    std::string path_download = "";
+    std::vector<uint8_t> data = MemoryManager::readBinary(path_download, RDSlogger);
+
+    size_t max_block_size = MAX_UDP_PAYLOAD - sizeof(TransferPacket);
+    size_t total_size = data.size();
+    int block_counter = 0;
+
+    for (size_t offset = 0; offset < total_size; offset += max_block_size, ++block_counter) {
+        size_t chunk_size = std::min<size_t>(max_block_size, total_size - offset);
+        std::vector<uint8_t> data_chunk(data.begin() + offset, data.begin() + offset + chunk_size);
+        
+        generate_frames.generateTransferDataRpi(new_id, chunk_size, 0x36, block_counter, data_chunk);
+    }
+    
+    generate_frames.requestTransferExit(new_id);
+}
+
 can_frame* RequestDownloadService::read_frame(int id, uint8_t sid)
 {
     struct pollfd pfd;

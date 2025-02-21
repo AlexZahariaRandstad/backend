@@ -26,9 +26,11 @@
 #include <condition_variable>
 #include <atomic>
 #include <set>
+#include <queue>
 
 #include "HandleFrames.h"
 #include "Logger.h"
+#include "Globals.h"
 
 /* List of service we have implemented. */
 const std::vector<uint8_t> service_sids = {
@@ -120,6 +122,13 @@ private:
     std::thread bufferFrameInThread;
     /* The logger used to write the logs. */
     Logger& receive_logger;
+    int udpSocket;
+    struct sockaddr_in serverAddr;
+    
+    std::queue<TransferPacket> packetQueue;
+    std::mutex mtxUdp;
+    std::condition_variable cvUdp;
+    std::atomic<bool> runningUdp;
     /* Update security for ECU based on notify */
     static bool ecu_state;
 
@@ -134,7 +143,8 @@ private:
      * @param handle_frame HandleFrame object used for getting new frames.
      */
     void bufferFrameOut(HandleFrames &handle_frame);
-    
+    void bufferFrameInUdp();
+    void bufferFrameOutUdp(HandleFrames &handle_frame);    
 protected:
     HandleFrames handle_frame;
     
@@ -189,6 +199,8 @@ public:
      * @brief Stops the receive process gracefully.
      */
     void stop();
+
+    void receiveUdp(HandleFrames &handle_frame);
 };
 
 #endif

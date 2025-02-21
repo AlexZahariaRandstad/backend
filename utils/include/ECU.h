@@ -61,6 +61,12 @@ public:
     void startFrames();
 
     /**
+     * @brief Function that starts the udp frame receiver.
+     * 
+     */
+    void startFramesUdp();
+
+    /**
      * @brief Function that stops the frame receiver.
      * 
      */

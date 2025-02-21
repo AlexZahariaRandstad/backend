@@ -6,15 +6,15 @@
 GenerateFrames::GenerateFrames(Logger& logger)
     : logger(logger)
 {}
-GenerateFrames::GenerateFrames(int socket, Logger& logger)
-    : logger(logger), socket(socket)
+GenerateFrames::GenerateFrames(int skt, Logger& logger)
+    : logger(logger), skt(skt)
 {
-    this->addSocket(socket);
+    this->addSocket(skt);
 }
 
 int GenerateFrames::getSocket()
 {
-    return this->socket;
+    return this->skt;
 }
 
 struct can_frame GenerateFrames::createFrame(int &id,  std::vector<uint8_t> &data, FrameType frameType)
@@ -52,7 +52,7 @@ struct can_frame GenerateFrames::createFrame(int &id,  std::vector<uint8_t> &dat
 bool GenerateFrames::sendFrame(int id, std::vector<uint8_t > data, FrameType frameType)
 {
     struct can_frame frame = createFrame(id, data, frameType);
-    int nbytes = write(this->socket, &frame, sizeof(frame));
+    int nbytes = write(this->skt, &frame, sizeof(frame));
     if (nbytes != sizeof(frame))
     {
         /* std::cout<<"Write error\n"; */
@@ -81,11 +81,11 @@ int GenerateFrames::sendFrame(int can_id, std::vector<uint8_t> data, int s, Fram
     }
     return 0;
 }
-void GenerateFrames::addSocket(int socket)
+void GenerateFrames::addSocket(int skt)
 {
-    if (socket >= 0)
+    if (skt >= 0)
     {
-        this->socket = socket;
+        this->skt = skt;
         return;
     }
     /* std::cout<<"Error: Pass a valid Socket\n"; */
@@ -121,17 +121,17 @@ void GenerateFrames::ecuReset(int id, uint8_t sub_function, bool response)
     return;
 }
 
-void GenerateFrames::ecuReset(int id, uint8_t sub_function, int socket, bool response)
+void GenerateFrames::ecuReset(int id, uint8_t sub_function, int skt, bool response)
 {
     std::vector<uint8_t> data(3);
     if (!response)
     {
         data = {0x2,0x11,sub_function};
-        this->sendFrame(id, data, socket, FrameType::DATA_FRAME);
+        this->sendFrame(id, data, skt, FrameType::DATA_FRAME);
         return;
     }
     data = {0x2,0x51,sub_function};
-    this->sendFrame(id, data, socket, FrameType::DATA_FRAME);
+    this->sendFrame(id, data, skt, FrameType::DATA_FRAME);
     return;
 }
 
@@ -639,4 +639,48 @@ void GenerateFrames::insertBytes(std::vector<uint8_t>& byteVector, unsigned int 
     for (int i = numBytes - 1; i >= 0; --i) {
         byteVector.push_back((num >> (i * 8)) & 0xFF);
     }
+}
+
+void GenerateFrames::send_udp_packet(const TransferPacket& packet) {
+    int sock = GLOBALS_H::createUdpSocket();
+    if (sock < 0) {
+        perror("Error creating UDP socket");
+        return;
+    }
+
+    sockaddr_in server_addr{};
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(UDP_PORT);
+    inet_pton(AF_INET, UDP_IP, &server_addr.sin_addr);
+
+    std::vector<uint8_t> buffer;
+    buffer.resize(sizeof(packet.id) + sizeof(packet.pci) + sizeof(packet.sid) + sizeof(packet.block_counter) + packet.data.size());
+
+    memcpy(buffer.data(), &packet.id, sizeof(packet.id));
+    memcpy(buffer.data() + sizeof(packet.id), &packet.pci, sizeof(packet.pci));
+    memcpy(buffer.data() + sizeof(packet.id) + sizeof(packet.pci), &packet.sid, sizeof(packet.sid));
+    memcpy(buffer.data() + sizeof(packet.id) + sizeof(packet.pci) + sizeof(packet.sid), &packet.block_counter, sizeof(packet.block_counter));
+    memcpy(buffer.data() + sizeof(packet.id) + sizeof(packet.pci) + sizeof(packet.sid) + sizeof(packet.block_counter), packet.data.data(), packet.data.size());
+
+    ssize_t sent = sendto(sock, buffer.data(), buffer.size(), 0, 
+                          (struct sockaddr*)&server_addr, sizeof(server_addr));
+    if (sent < 0) {
+        perror("Error sending packet");
+    } else {
+        std::cout << "Bytes " << sent << " sent to " << UDP_IP << ":" << UDP_PORT << std::endl;
+    }
+
+    close(sock);
+}
+
+
+void GenerateFrames::generateTransferDataRpi(uint32_t id, uint16_t pci, uint8_t sid, uint8_t block_counter, const std::vector<uint8_t>& data) {
+    TransferPacket packet;
+    packet.id = id;
+    packet.pci = pci;
+    packet.sid = sid;
+    packet.block_counter = block_counter;
+    packet.data = data;
+
+    send_udp_packet(packet);
 }

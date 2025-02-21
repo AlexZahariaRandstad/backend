@@ -96,3 +96,31 @@ void stopProcess(std::string process_name)
         pclose(fp);
     }
 }
+
+int createUdpSocket() {
+    int udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udp_socket < 0) {
+        std::cerr << "Error creating UDP socket!" << std::endl;
+        return -1;
+    }
+
+    int broadcastEnable = 1;
+    if (setsockopt(udp_socket, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable)) < 0) {
+        std::cerr << "Error setting socket options for broadcast!" << std::endl;
+        close(udp_socket);
+        return -1;
+    }
+
+    struct sockaddr_in addr = {};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(UDP_PORT);
+    addr.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(udp_socket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        std::cerr << "Error binding UDP socket!" << std::endl;
+        close(udp_socket);
+        return -1;
+    }
+
+    return udp_socket;
+}

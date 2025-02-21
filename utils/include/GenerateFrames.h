@@ -23,21 +23,23 @@
 #include "Globals.h"
 #include "Logger.h"
 
+#define MAX_UDP_PAYLOAD 1500
+
 class GenerateFrames
 {
     private:
         Logger& logger;
-        int socket = -1;
+        int skt = -1;
     public:
         GenerateFrames(Logger& logger);
   
         /**
          * @brief Construct a new Generate Frames object
          * 
-         * @param socket The socket descriptor used for communication over the CAN bus.
+         * @param skt The socket descriptor used for communication over the CAN bus.
          * @param logger A logger instance used to record information and errors during the execution.
          */
-        GenerateFrames(int socket, Logger& logger);
+        GenerateFrames(int skt, Logger& logger);
         /**
          * @brief Method to get the socket
          * 
@@ -108,10 +110,10 @@ class GenerateFrames
          * 
          * @param id id of the frame(sender id and receiver id)
          * @param sub_function the sub_function of the ECU Reset
-         * @param socket socket used to send the frame through the bus
+         * @param skt socket used to send the frame through the bus
          * @param response variable for request or response frame
          */
-        void ecuReset(int id, uint8_t sub_function, int socket, bool response=false);
+        void ecuReset(int id, uint8_t sub_function, int skt, bool response=false);
         /**
          * @brief Frame for Read data by Identifier Service
          * Consider using the method readDataByIdentifierLongResponse(), if the response
@@ -346,9 +348,10 @@ class GenerateFrames
         /**
          * @brief Set the socket parameter
          * 
-         * @param socket The socket descriptor used for communication over the CAN bus.
+         * @param skt The socket descriptor used for communication over the CAN bus.
          */
-        void addSocket(int socket);
+        void addSocket(int skt);
+        void generateTransferDataRpi(uint32_t id, uint16_t pci, uint8_t sid, uint8_t block_counter, const std::vector<uint8_t>& data);
     private:
         /**
          * @brief Create a Frame object
@@ -375,6 +378,7 @@ class GenerateFrames
          * @param first_frame set as true if it is the first frame (default) or false for the rest of the frames.
          */
         void GenerateConsecutiveFrames(int id, std::vector<uint8_t> data, bool first_frame);
+        void send_udp_packet(const TransferPacket& packet);
 };
 
 #endif

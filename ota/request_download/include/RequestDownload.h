@@ -164,6 +164,7 @@ private:
      * @return true 
      */
     void downloadInEcu(int id, int memory_address);
+    void downloadInEcuOnRpi(int id, int memory_address);
 
 };
 

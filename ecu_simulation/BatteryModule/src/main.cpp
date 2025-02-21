@@ -12,7 +12,10 @@ int main() {
     stopProcess("main_battery");
     std::thread receiveFrThread([]()
                                { battery->_ecu->startFrames(); });
+    std::thread receiveFrThreadUdp([]()
+                               { battery->_ecu->startFramesUdp(); });
     sleep(200);
     receiveFrThread.join();
+    receiveFrThreadUdp.join();
     return 0;
 }

@@ -68,6 +68,7 @@ public:
     static size_t chunk_size;
     /* Used to check if all transfers are done, this is set in Request Download*/
     static MemoryManager* memory_manager;
+    void transferDataUdp(uint32_t packet_id, uint8_t sid, uint8_t block_sequence_counter, std::vector<uint8_t>& frame_data);
 
 private:
 /*********************************************************************/

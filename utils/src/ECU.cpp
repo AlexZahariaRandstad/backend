@@ -47,6 +47,20 @@ void ECU::startFrames()
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
+void ECU::startFramesUdp()
+{
+    LOG_INFO(_logger.GET_LOGGER(), "{:#x} starts the udp frame receiver", _module_id);
+
+    /* Create a HandleFrames object to process received frames */
+    HandleFrames handleFramesUdp(_ecu_socket, _logger);
+
+    /* Receive a CAN frame using the frame receiver and process it with handleFrames */
+    _frame_receiver->receiveUdp(handleFramesUdp);
+
+    /* Sleep for 100 milliseconds before receiving the next frame to prevent busy-waiting */
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
 void ECU::stopFrames()
 {
     _frame_receiver->stop();

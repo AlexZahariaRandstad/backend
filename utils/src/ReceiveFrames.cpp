@@ -16,8 +16,9 @@
 bool ReceiveFrames::ecu_state = false;
 ReceiveFrames::ReceiveFrames(int socket, int current_module_id, Logger& receive_logger) : socket(socket),
                                                                                             current_module_id(current_module_id),
-                                                                                            running(true), 
+                                                                                            running(true),
                                                                                             receive_logger(receive_logger),
+                                                                                            runningUdp(true),
                                                                                             handle_frame(socket, receive_logger)
 {
     if (socket < 0) 
@@ -35,6 +36,23 @@ ReceiveFrames::ReceiveFrames(int socket, int current_module_id, Logger& receive_
         /* std::cerr << "Error: Pass a valid Module ID\n"; */
         LOG_WARN(receive_logger.GET_LOGGER(), "Error: Pass a valid Module ID\n");
         throw std::runtime_error("Error: Pass a valid Module ID\n");
+    }
+
+    udpSocket = createUdpSocket();
+    if (udpSocket < 0) {
+        std::cerr << "Error creating UDP socket\n";
+        return;
+    }
+
+    memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serverAddr.sin_port = htons(UDP_PORT);
+
+    if (bind(udpSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
+        std::cerr << "Error binding UDP socket\n";
+        close(udpSocket);
+        return;
     }
 
     /* Print the frame_id for debugging */ 
@@ -419,4 +437,53 @@ void ReceiveFrames::printFrame(const struct can_frame &frame)
         dataStream << " 0x" << std::hex << int(frame.data[frame_byte]);
     }
     LOG_DEBUG(receive_logger.GET_LOGGER(), "{}", dataStream.str());
+}
+
+void ReceiveFrames::receiveUdp(HandleFrames &handle_frame) {
+    bufferFrameInThread = std::thread(&ReceiveFrames::bufferFrameInUdp, this);
+    this->bufferFrameOutUdp(handle_frame);
+}
+
+void ReceiveFrames::bufferFrameInUdp() {
+    while (runningUdp) {
+        uint8_t buffer[1500];
+        struct sockaddr_in client_addr;
+        socklen_t clientLen = sizeof(client_addr);
+
+        ssize_t bytesReceived = recvfrom(udpSocket, buffer, sizeof(buffer), 0,
+                                          (struct sockaddr*)&client_addr, &clientLen);
+
+        if (bytesReceived >= 8) {
+            TransferPacket packet;
+            
+            packet.id = (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+            packet.pci = (buffer[4] << 8) | buffer[5];
+            packet.sid = buffer[6];
+            packet.block_counter = buffer[7];
+        
+            if (bytesReceived > 8) {
+                packet.data.assign(buffer + 8, buffer + bytesReceived);
+            }
+        
+            std::unique_lock<std::mutex> lock(mtxUdp);
+            packetQueue.push(packet);
+            cv.notify_one();
+        }
+    }
+}
+
+
+void ReceiveFrames::bufferFrameOutUdp(HandleFrames &handle_frame) {
+    while (runningUdp) {
+        TransferPacket packet;
+        {
+            std::unique_lock<std::mutex> lock(mtxUdp);
+            cv.wait(lock, [&]() { return !packetQueue.empty(); });
+        
+            packet = packetQueue.front();
+            packetQueue.pop();
+        }
+        
+        handle_frame.processUdpFrames(packet);
+    }
 }

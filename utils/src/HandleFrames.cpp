@@ -500,3 +500,23 @@ void HandleFrames::processFrameData(int can_socket, canid_t frame_id, uint8_t si
         }
     }
 }
+
+void HandleFrames::processUdpFrames(const TransferPacket& packet) {
+    if (packet.data.size() < 3) {  // Minimum size check (SID + block counter + at least 1 byte of data)
+        std::cerr << "Invalid UDP packet received. Dropping packet." << std::endl;
+        return;
+    }
+
+    // Extract header information
+    canid_t frame_id = packet.id;
+    uint8_t sid = packet.sid;
+    uint8_t block_counter = packet.block_counter;
+
+    // Extract payload data
+    std::vector<uint8_t> frame_data = packet.data;
+
+    // Process the received data using TransferData module
+    TransferData transfer_data(0, _logger);
+    transfer_data.transferDataUdp(frame_id, sid, block_counter, frame_data);
+    LOG_DEBUG(_logger.GET_LOGGER(), "TransferData called with one frame.");
+}

@@ -241,3 +241,78 @@ void TransferData::transferData(canid_t can_id, std::vector<uint8_t>& transfer_r
         expected_block_sequence_number = 0x01;
     }
 }
+
+void TransferData::transferDataUdp(uint32_t packet_id, uint8_t sid, uint8_t block_sequence_counter, std::vector<uint8_t>& frame_data) {
+    // Static vector to retain data between function calls
+    static std::vector<uint8_t> data;
+    uint32_t aux_packet_id = packet_id;
+    NegativeResponse nrc(socket, transfer_data_logger);
+    std::vector<uint8_t> response;
+
+    // Extract sender and receiver IDs
+    uint8_t receiver_id = packet_id & 0xFF;
+    uint8_t sender_id = (packet_id >> 8) & 0xFF;
+    uint8_t target_id = (packet_id >> 16) & 0xFF;
+    packet_id = (target_id << 16) | (receiver_id << 8) | sender_id;
+
+    if (frame_data.empty()) {
+        nrc.sendNRC(packet_id, sid, NegativeResponse::IMLOIF);
+        FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {PROCESSING_TRANSFER_FAILED}, aux_packet_id, transfer_data_logger, socket);
+        return;
+    }
+
+    OtaUpdateStatesEnum ota_state = static_cast<OtaUpdateStatesEnum>(FileManager::getDidValue(OTA_UPDATE_STATUS_DID, aux_packet_id, transfer_data_logger)[0]);
+    if (ota_state == WAIT_DOWNLOAD_COMPLETED) {
+        data.clear();
+        RDSData rds_data = RequestDownloadService::getRdsData();
+        chunk_size = rds_data.max_number_block;
+        expected_block_sequence_number = 1;
+        TransferData::memory_manager = MemoryManager::getInstance(transfer_data_logger);
+
+        if (memory_manager->getAddress() != rds_data.address || memory_manager->getPath() != DEV_LOOP) {
+            LOG_WARN(transfer_data_logger.GET_LOGGER(), "Transfer Data initialized without setting address and path in Request Download. Initializing now.");
+            memory_manager->setAddress(rds_data.address);
+            memory_manager->setPath(DEV_LOOP);
+        }
+        memory_write_status = false;
+        FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {PROCESSING}, aux_packet_id, transfer_data_logger, socket);
+        ota_state = PROCESSING;
+        LOG_INFO(transfer_data_logger.GET_LOGGER(), "Data transfer started.");
+    }
+
+    if (ota_state != PROCESSING && ota_state != PROCESSING_TRANSFER_COMPLETE) {
+        LOG_WARN(transfer_data_logger.GET_LOGGER(), "Data transfer is not initialized. Use Request Download first. Current OTA state: {}", ota_state);
+        nrc.sendNRC(packet_id, sid, NegativeResponse::CNC);
+        return;
+    }
+
+    if (expected_block_sequence_number != block_sequence_counter) {
+        nrc.sendNRC(packet_id, sid, NegativeResponse::WBSC);
+        return;
+    }
+
+    // Append received data to buffer
+    data.insert(data.end(), frame_data.begin(), frame_data.end());
+    std::cout << "\rBytes received: " << data.size() << std::flush;
+
+    if (ota_state == PROCESSING_TRANSFER_COMPLETE) {
+        if (!memory_write_status) {
+            memory_write_status = memory_manager->writeToAddress(data);
+            if (!memory_write_status) {
+                nrc.sendNRC(packet_id, sid, NegativeResponse::TDS);
+                FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {PROCESSING_TRANSFER_FAILED}, aux_packet_id, transfer_data_logger, socket);
+                LOG_INFO(transfer_data_logger.GET_LOGGER(), "Data transfer failed while writing to memory.");
+                return;
+            }
+            response = {0x03, 0x76, block_sequence_counter, static_cast<uint8_t>(ota_state)};
+            generate_frames.sendFrame(packet_id, response);
+            LOG_INFO(transfer_data_logger.GET_LOGGER(), "Data transfer complete.");
+        }
+        return;
+    }
+
+    // Continue transfer
+    response = {0x03, 0x76, block_sequence_counter, static_cast<uint8_t>(ota_state)};
+    generate_frames.sendFrame(packet_id, response);
+    expected_block_sequence_number = (expected_block_sequence_number + 1) % 256;
+}

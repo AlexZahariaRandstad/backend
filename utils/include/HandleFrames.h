@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "DiagnosticSessionControl.h"
+#include "../include/Globals.h"
 
 class HandleFrames 
 {
@@ -76,5 +77,6 @@ public:
      * @return Returns true of the processing is done or false if an error is encountered. 
      */
     bool checkReceivedFrame(int nbytes, const struct can_frame &frame);
+    void processUdpFrames(const TransferPacket& packet);
 };
 #endif /* HANDLE_FRAMES_H */
