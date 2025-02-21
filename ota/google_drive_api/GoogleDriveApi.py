@@ -205,6 +205,40 @@ class GDriveAPI:
 
         return json_file
 
+    def getDriveData_from_ECU(self, file):
+
+        json_files = {"versions": []}
+        folder_data = None
+
+        if file == 'MCU':
+            folder_data = self.__getFilesFromFolder(DRIVE_MCU_SW_VERSIONS_FILE)
+        elif file == "ECUBATTERY":
+            folder_data = self.__getFilesFromFolder(DRIVE_ECU_BATTERY_SW_VERSIONS_FILE)
+        elif file == "ENGINE":
+            folder_data = self.__getFilesFromFolder(DRIVE_ECU_ENGINE_SW_VERSIONS_FILE)
+        elif file == "DOORS":
+            folder_data = self.__getFilesFromFolder(DRIVE_ECU_DOORS_SW_VERSIONS_FILE)
+        elif file == "HVAC":
+            folder_data = self.__getFilesFromFolder(DRIVE_ECU_HVAC_SW_VERSIONS_FILE)
+
+        if folder_data :
+            for file in folder_data['files']:
+
+                json_file = {
+                    'name': file['name'],
+                    'id': file['id'],
+                    'type': self.__getFileType(file),
+                    'size' : file.get('size', 'N/A'),
+                    'size_uncompressed' : file.get('appProperties', {}).get('size_uncompressed', 0),
+                    'sw_version': self.__getSoftwareVersion(file['name']),
+                }
+                self.__drive_data_array.append(json_file)
+                json_files['versions'].append(json_file)
+        else:
+            json_files = self.getDriveData()
+
+        return json_files
+
 
 # Object to be imported in other modules
 gDrive = GDriveAPI.getInstance(CREDS_PATH)

@@ -27,7 +27,8 @@ class IDsToJson():
 
 
 class RequestIdAction(Action):
-    """ curl -X GET http://127.0.0.1:5000/api/request_ids """
+
+    """ curl -X GET http://127.0.0.1:5000/api/request_ids?is_manual_flow=false """
 
     def __init__(self):
         super().__init__()

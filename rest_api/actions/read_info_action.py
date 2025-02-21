@@ -131,7 +131,7 @@ class ReadInfo(Action):
 
         Endpoint test (external flow):
 
-        curl -X GET "http://127.0.0.1:5000/api/read_info_battery?is_manual_flow=false" -H "Content-Type: application/json"
+        curl -X GET "http://127.0.0.1:5000/api/read_info_battery?is_manual_flow=false&item=percentage" -H "Content-Type: application/json"
 
         """
         try:
