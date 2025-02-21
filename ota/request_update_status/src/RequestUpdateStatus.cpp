@@ -52,6 +52,11 @@ std::vector<uint8_t> RequestUpdateStatus::requestUpdateStatus(canid_t request_id
     if(RIDB_response[1] == NEGATIVE_RESPONSE)
     {
         nrc.sendNRC(response_id, REQUEST_UPDATE_STATUS_SID, RIDB_response[3]);
+        /* Return the negative response from the request update status */
+        response.push_back(REQUEST_UPDATE_STATUS_RESPONSE_NEGATIVE_SIZE); /* RESPONSE NEGATIVE SIZE = 0X04 */
+        response.push_back(NEGATIVE_RESPONSE); /* NEGATIVE RESPONSE = 0X7F*/
+        response.push_back(REQUEST_UPDATE_STATUS_SID); /* SID RETURNED ON FAILURE */
+        response.push_back(RIDB_response[3]);
         AccessTimingParameter::stopTimingFlag(receiver_byte, REQUEST_UPDATE_STATUS_SID);
         return response;
     }
@@ -63,13 +68,19 @@ std::vector<uint8_t> RequestUpdateStatus::requestUpdateStatus(canid_t request_id
             LOG_WARN(_logger.GET_LOGGER(), "Status value {} read from readDataByIdentifier is invalid.", status);
             nrc.sendNRC(response_id, REQUEST_UPDATE_STATUS_SID, NegativeResponse::ROOR);
             AccessTimingParameter::stopTimingFlag(receiver_byte, REQUEST_UPDATE_STATUS_SID);
+
+            /* Return the negative response from the request update status */
+            response.push_back(REQUEST_UPDATE_STATUS_RESPONSE_NEGATIVE_SIZE); /* RESPONSE NEGATIVE SIZE = 0X04 */
+            response.push_back(NEGATIVE_RESPONSE); /* NEGATIVE RESPONSE = 0X7F*/
+            response.push_back(REQUEST_UPDATE_STATUS_SID); /* SID RETURNED ON FAILURE */
+            response.push_back(REQUEST_OUT_OF_RANGE); /* SAME AS NegativeResponse::ROOR */
             return response;
         }
         else
         {
             /* Everything ok, Ota Update Status received*/
-            response.push_back(PCI_L);                              /* PCI_l */
-            response.push_back(REQUEST_UPDATE_STATUS_SID_SUCCESS);  /* SERVICE SUCCESs = SID + 0X40 */
+            response.push_back(REQUEST_UPDATE_STATUS_RESPONSE_SUCCESS_SIZE);  /* RESPONSE SUCCESS SIZE = 0X03 */
+            response.push_back(REQUEST_UPDATE_STATUS_SID_SUCCESS);  /* SERVICE SUCCESS = SID + 0X40 */
             response.push_back(status);                   /* OTA UPDATE STATUS */
         }
     }
@@ -85,7 +96,7 @@ bool RequestUpdateStatus::isValidStatus(uint8_t status)
 {
     std::vector<OtaUpdateStatesEnum> valid_states{IDLE,INIT,READY,PROCESSING,PROCESSING_TRANSFER_COMPLETE,PROCESSING_TRANSFER_FAILED,
                                                     WAIT,WAIT_DOWNLOAD_COMPLETED,WAIT_DOWNLOAD_FAILED,VERIFY, VERIFY_COMPLETE, VERIFY_FAILED,
-                                                    ACTIVATE,ACTIVATE_INSTALL_COMPLETE,ACTIVATE_INSTALL_FAILED,ERROR};
+                                                    ACTIVATE,ACTIVATE_INSTALL_COMPLETE,ACTIVATE_INSTALL_FAILED};
     /* Check if provided status from readDataByIdentifier is a valid one. */
     for(auto &state : valid_states)
     {

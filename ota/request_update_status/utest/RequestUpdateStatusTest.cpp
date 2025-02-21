@@ -1,19 +1,33 @@
+#include <cstddef>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <memory>
+#include <iostream>
 #include "../include/RequestUpdateStatus.h"
 #include "../../../uds/access_timing_parameters/include/AccessTimingParameter.h"
+#include "../../../utils/include/CaptureFrame.h"
 #include "../../../uds/write_data_by_identifier/include/WriteDataByIdentifier.h"
 #include "../../../mcu/include/MCUModule.h"
 #include "../../../utils/include/NegativeResponse.h"
+#include "../../../uds/authentication/include/SecurityAccess.h"
+#include "../../../utils/include/TestUtils.h"
 
 class RequestUpdateStatusTest : public ::testing::Test {
 protected:
-    int socket_id = 2;
+    int socket_id;
+    int socket_id2;
     Logger logger;
     RequestUpdateStatus RUS = RequestUpdateStatus(socket_id, logger);
+    std::shared_ptr<SecurityAccess> spSecurityAccess;
+    std::shared_ptr<CaptureFrame> spCapturedFrame;
 
     RequestUpdateStatusTest()
     {
+        v_loadProjectPath();
+        socket_id = createSocket(0);
+        socket_id2 = createSocket(0);
+        spSecurityAccess = std::make_shared<SecurityAccess>(socket_id,logger);
+        spCapturedFrame = std::make_shared<CaptureFrame>(socket_id2);
         MCU::mcu = new MCU::MCUModule(0x01);
     }
     
@@ -50,11 +64,36 @@ TEST_F(RequestUpdateStatusTest, StatusInvalidTest)
 }
 
 /**
+ * @brief Test if a negative response is sent in case of an invalid status.
+ * 
+ */
+TEST_F(RequestUpdateStatusTest, NegativeResponseInvalidStatusTest)
+{
+    int request_id = 0x0000fa10; 
+    uint8_t invalid_status = ERROR;
+
+    WriteDataByIdentifier WDBI(logger, socket_id);
+    WDBI.WriteDataByIdentifierService(request_id, {PCI_L, WRITE_DATA_BY_IDENTIFIER_SID, OTA_UPDATE_STATUS_DID_MSB, OTA_UPDATE_STATUS_DID_LSB, invalid_status});
+
+    std::vector<uint8_t> request = {PCI_L, REQUEST_UPDATE_STATUS_SID};
+    std::vector<uint8_t> response = RUS.requestUpdateStatus(request_id, request);
+
+    std::vector<uint8_t> expected_response = {REQUEST_UPDATE_STATUS_RESPONSE_NEGATIVE_SIZE, NEGATIVE_RESPONSE, REQUEST_UPDATE_STATUS_SID, NegativeResponse::SAD};
+    
+    EXPECT_EQ(response.size(), expected_response.size());
+    for(uint8_t index = 0; index <= expected_response.size() - 1; index++)
+    {
+        EXPECT_EQ(response[index], expected_response[index]);
+    }
+}
+
+/**
  * @brief Test if a wrong request id is redirected to the right one (caller API, receiver MCU)
  * 
  */
 TEST_F(RequestUpdateStatusTest, WrongSenderReceiverCheckTest)
 {
+    v_requestSecurityAccess(spSecurityAccess, spCapturedFrame, REQUEST_UPDATE_STATUS_SID);
     int request_id = 0x00001011;
     std::vector<uint8_t> request = {PCI_L, REQUEST_UPDATE_STATUS_SID};
     std::vector<uint8_t> response = RUS.requestUpdateStatus(request_id, request);
@@ -75,6 +114,7 @@ TEST_F(RequestUpdateStatusTest, WrongSenderReceiverCheckTest)
  */
 TEST_F(RequestUpdateStatusTest, InitialOtaStatusTest)
 {
+    v_requestSecurityAccess(spSecurityAccess, spCapturedFrame, REQUEST_UPDATE_STATUS_SID);
     int request_id = 0x0000fa10;
     std::vector<uint8_t> request = {PCI_L, REQUEST_UPDATE_STATUS_SID};
     std::vector<uint8_t> response = RUS.requestUpdateStatus(request_id, request);
@@ -94,6 +134,7 @@ TEST_F(RequestUpdateStatusTest, InitialOtaStatusTest)
  */
 TEST_F(RequestUpdateStatusTest, AfterStatusUpdateTest)
 {
+    v_requestSecurityAccess(spSecurityAccess, spCapturedFrame, REQUEST_UPDATE_STATUS_SID);
     int request_id = 0x0000fa10;
     uint8_t new_status = WAIT;
 
@@ -116,10 +157,11 @@ TEST_F(RequestUpdateStatusTest, AfterStatusUpdateTest)
  * @brief Test if a negative response is sent in case of an invalid status.
  * 
  */
-TEST_F(RequestUpdateStatusTest, NegativeResponseInvalidStatusTest)
+TEST_F(RequestUpdateStatusTest, PositiveResponseInvalidStatusTest)
 {
+    v_requestSecurityAccess(spSecurityAccess, spCapturedFrame, REQUEST_UPDATE_STATUS_SID);
     int request_id = 0x0000fa10;
-    uint8_t invalid_status = 0xFF;
+    uint8_t invalid_status = ERROR;
 
     WriteDataByIdentifier WDBI(logger, socket_id);
     WDBI.WriteDataByIdentifierService(request_id, {PCI_L, WRITE_DATA_BY_IDENTIFIER_SID, OTA_UPDATE_STATUS_DID_MSB, OTA_UPDATE_STATUS_DID_LSB, invalid_status});
@@ -127,7 +169,7 @@ TEST_F(RequestUpdateStatusTest, NegativeResponseInvalidStatusTest)
     std::vector<uint8_t> request = {PCI_L, REQUEST_UPDATE_STATUS_SID};
     std::vector<uint8_t> response = RUS.requestUpdateStatus(request_id, request);
 
-    std::vector<uint8_t> expected_response = {PCI_L, NEGATIVE_RESPONSE, REQUEST_UPDATE_STATUS_SID, REQUEST_OUT_OF_RANGE};
+    std::vector<uint8_t> expected_response = {REQUEST_UPDATE_STATUS_RESPONSE_NEGATIVE_SIZE, NEGATIVE_RESPONSE, REQUEST_UPDATE_STATUS_SID, REQUEST_OUT_OF_RANGE};
     
     EXPECT_EQ(response.size(), expected_response.size());
     for(uint8_t index = 0; index <= expected_response.size() - 1; index++)
