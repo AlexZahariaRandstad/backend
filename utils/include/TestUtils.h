@@ -50,6 +50,22 @@ void testFrames(struct can_frame expected_frame, struct can_frame captured_frame
 void testFrames(struct can_frame expected_frame, CaptureFrame captured_frame);
 
 /**
+ * @brief Print a frame's attributes used in equality checking (can_id, can_dlc, data)
+ * @warning Debug use only, not intended to appear in unit tests' final version
+ * @param frameName A name associated with the frame, useful for differentiating among multiple frames(e.g. "expected frame", "actual frame")
+ * @param frame The frame to be printed
+ */
+void v_PrintDebugFrame(std::string frameName, struct can_frame frame);
+
+/**
+ * @brief Print a frame's attributes used in equality checking (can_id, can_dlc, data)
+ * @warning Debug use only, not intended to appear in unit tests' final version
+ * @param frameName A name associated with the frame, useful for differentiating among multiple frames(e.g. "expected frame", "actual frame")
+ * @param frame The frame to be printed
+ */
+void v_PrintDebugFrame(std::string frameName, CaptureFrame frame);
+
+/**
  * @brief Create a Frame object
  * 
  * @param id if of the frame
