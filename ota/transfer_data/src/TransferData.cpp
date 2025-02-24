@@ -115,7 +115,7 @@ void TransferData::processDataForTransfer(canid_t can_id, std::vector<uint8_t>& 
     /* Display progress */
     std::cout << "\rProgress: " << static_cast<int>((static_cast<double>(bytes_sent) / total_size) * 100) << "% "
                 << "Sent: " << bytes_sent << " / " << total_size
-                << std::flush;
+                << std::endl;
 }
 
 /* method used to transfer the data */
@@ -194,7 +194,7 @@ void TransferData::transferData(canid_t can_id, std::vector<uint8_t>& transfer_r
     data.insert(data.end(), transfer_request.begin() + 3, transfer_request.end());
     /* Display bytes received */
     std::cout << "\rBytes received: " << data.size()
-                << std::flush;
+                << std::endl;
     if(ota_state == PROCESSING_TRANSFER_COMPLETE)
     {
         if(memory_write_status == false)
@@ -214,6 +214,7 @@ void TransferData::transferData(canid_t can_id, std::vector<uint8_t>& transfer_r
             response.push_back(0x03); /* PCI */
             response.push_back(0x76); /* Service ID */
             response.push_back(block_sequence_counter); /* block_sequence_counter */
+            LOG_INFO(transfer_data_logger.GET_LOGGER(), "OTA state is {:x}",static_cast<int>(ota_state));
             response.emplace_back(static_cast<uint8_t>(ota_state));
             /* Send the postive response frame */
             generate_frames.sendFrame(can_id, response);
