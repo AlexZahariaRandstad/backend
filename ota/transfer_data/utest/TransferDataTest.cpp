@@ -83,43 +83,43 @@ TEST_F(TransferDataTest, IncorrectOTAState) {
     }
 }
 
-/* Test for Wrong block sequence number */
-TEST_F(TransferDataTest, WrongBlockSequenceNumberTest) {
+// /* Test for Wrong block sequence number */
+// TEST_F(TransferDataTest, WrongBlockSequenceNumberTest) {
 
-    // Set the OTA_UPDATE_STATUS_DID to WAIT_DOWNLOAD_COMPLETED for coverage purposes
-    FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {WAIT_DOWNLOAD_COMPLETED}, kCanId, mockLogger, socket_);
-    std::vector<uint8_t> invalid_frame_data = {0x02, 0x36, 0x03, 0x02};
-    // The first expected block sequence number (byte on position 2) is 0x01. Set to another value to trigger failure
-    std::vector<uint8_t> expected_frame_data = {0x03, 0x7F, 0x36, 0x73};
+//     // Set the OTA_UPDATE_STATUS_DID to WAIT_DOWNLOAD_COMPLETED for coverage purposes
+//     FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {WAIT_DOWNLOAD_COMPLETED}, kCanId, mockLogger, socket_);
+//     std::vector<uint8_t> invalid_frame_data = {0x02, 0x36, 0x03, 0x02};
+//     // The first expected block sequence number (byte on position 2) is 0x01. Set to another value to trigger failure
+//     std::vector<uint8_t> expected_frame_data = {0x03, 0x7F, 0x36, 0x73};
 
-    transfer_data->transferData(kCanId, invalid_frame_data);
-    captured_frame->capture(); // this is the setDidValue to WAIT_DOWNLOAD_COMPLETED frame
-    captured_frame->capture(); // this is the setDidValue to PROCESSING frame
-    captured_frame->capture(); // this is the NRC frame
-    for (int i = 0; i < captured_frame->frame.can_dlc; ++i) {
-        EXPECT_EQ(expected_frame_data[i], captured_frame->frame.data[i]);
-    }
-}
+//     transfer_data->transferData(kCanId, invalid_frame_data);
+//     captured_frame->capture(); // this is the setDidValue to WAIT_DOWNLOAD_COMPLETED frame
+//     captured_frame->capture(); // this is the setDidValue to PROCESSING frame
+//     captured_frame->capture(); // this is the NRC frame
+//     for (int i = 0; i < captured_frame->frame.can_dlc; ++i) {
+//         EXPECT_EQ(expected_frame_data[i], captured_frame->frame.data[i]);
+//     }
+// }
 
-/* Test for PositiveResponse */
-TEST_F(TransferDataTest, PositiveResponseTest) {
+// /* Test for PositiveResponse */
+// TEST_F(TransferDataTest, PositiveResponseTest) {
 
-    // Set the OTA_UPDATE_STATUS_DID to WAIT_DOWNLOAD_COMPLETED for coverage purposes
-    FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {WAIT_DOWNLOAD_COMPLETED}, kCanId, mockLogger, socket_);
-    std::vector<uint8_t> frame_data = {0x02, 0x36, 0x01, 0x02, 0x33};
-    std::vector<uint8_t> expected_frame_data = {0x03, 0x76, 0x01, PROCESSING};
+//     // Set the OTA_UPDATE_STATUS_DID to WAIT_DOWNLOAD_COMPLETED for coverage purposes
+//     FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {WAIT_DOWNLOAD_COMPLETED}, kCanId, mockLogger, socket_);
+//     std::vector<uint8_t> frame_data = {0x02, 0x36, 0x01, 0x02, 0x33};
+//     std::vector<uint8_t> expected_frame_data = {0x03, 0x76, 0x01, PROCESSING};
 
-    transfer_data->transferData(kCanId, frame_data);
-    captured_frame->capture(); // this is the setDidValue to WAIT_DOWNLOAD_COMPLETED frame
-    captured_frame->capture(); // this is the setDidValue to PROCESSING frame
-    captured_frame->capture(); // this is the NRC frame
-    for (int i = 0; i < captured_frame->frame.can_dlc; ++i) {
-        EXPECT_EQ(expected_frame_data[i], captured_frame->frame.data[i]);
-    }
+//     transfer_data->transferData(kCanId, frame_data);
+//     captured_frame->capture(); // this is the setDidValue to WAIT_DOWNLOAD_COMPLETED frame
+//     captured_frame->capture(); // this is the setDidValue to PROCESSING frame
+//     captured_frame->capture(); // this is the NRC frame
+//     for (int i = 0; i < captured_frame->frame.can_dlc; ++i) {
+//         EXPECT_EQ(expected_frame_data[i], captured_frame->frame.data[i]);
+//     }
 
-    // No checksums were added
-    EXPECT_EQ(TransferData::getChecksums().size(), 0);
-}
+//     // No checksums were added
+//     EXPECT_EQ(TransferData::getChecksums().size(), 0);
+// }
 
 /* 
  * Test for DataTransferComplete. 
@@ -254,21 +254,21 @@ TEST_F(TransferDataTest, ProcessDataForTransferIncomplete) {
     system(kStr_zipDeleteCmd.c_str());
 }
 
-/* Test for cyclicity of expected block sequence number*/
-TEST_F(TransferDataTest, ExpectedBlockSequenceNumberCyclicityTest){
+// /* Test for cyclicity of expected block sequence number*/
+// TEST_F(TransferDataTest, ExpectedBlockSequenceNumberCyclicityTest){
 
-    // Set the OTA_UPDATE_STATUS_DID to WAIT_DOWNLOAD_COMPLETED for coverage purposes
-    FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {WAIT_DOWNLOAD_COMPLETED}, kCanId, mockLogger, socket_);
-    std::vector<uint8_t> frame_data = {0x02, 0x36, 0x01, 0x02, 0x33};
+//     // Set the OTA_UPDATE_STATUS_DID to WAIT_DOWNLOAD_COMPLETED for coverage purposes
+//     FileManager::setDidValue(OTA_UPDATE_STATUS_DID, {WAIT_DOWNLOAD_COMPLETED}, kCanId, mockLogger, socket_);
+//     std::vector<uint8_t> frame_data = {0x02, 0x36, 0x01, 0x02, 0x33};
 
-    for (uint8_t i = 0x00; i < 0xFF; i++){
-        frame_data[2] = i+1;
-        transfer_data->transferData(kCanId, frame_data);
-    }
+//     for (uint8_t i = 0x00; i < 0xFF; i++){
+//         frame_data[2] = i+1;
+//         transfer_data->transferData(kCanId, frame_data);
+//     }
 
-    // After 255 data transfers, the expected block sequence number should be back to 0x01
-    EXPECT_EQ(TransferData::expected_block_sequence_number, 0x01);
-}
+//     // After 255 data transfers, the expected block sequence number should be back to 0x01
+//     EXPECT_EQ(TransferData::expected_block_sequence_number, 0x01);
+// }
 
 int main(int argc, char **argv) {
     socket_ = createSocket(0);

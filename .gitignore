@@ -14,7 +14,7 @@ rest_api/utils/__pycache__
 rest_api/utils/log*
 
 # ignore result data files
-*_data.txt
+# *_data.txt
 dtcs.txt
 
 # ignore generated log files

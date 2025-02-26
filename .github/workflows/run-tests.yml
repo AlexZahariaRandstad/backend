@@ -1,0 +1,120 @@
+name: ci_pipeline_runAllTests
+
+on: [push]
+
+jobs:
+
+  # build_ecu:
+  #   runs-on: self-hosted
+  #   strategy:
+  #     matrix:
+  #       module_executable:
+  #         - { module: BatteryModule, executable: main_battery }
+  #         - { module: HVACModule, executable: main_hvac }
+  #         - { module: DoorsModule, executable: main_doors }
+  #         - { module: EngineModule, executable: main_engine }
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Cache APT Dependencies
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: /var/cache/apt
+  #         key: ${{ runner.os }}-apt-cache
+  #         restore-keys: |
+  #           ${{ runner.os }}-apt-cache
+
+  #     - name: Build ECU Module - ${{ matrix.module_executable.module }}
+  #       run: |
+  #         cd ecu_simulation/${{ matrix.module_executable.module }}
+  #         make -j$(nproc)
+
+
+  #     - name: Upload ECU Build Artifacts - ${{ matrix.module_executable.module }}
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ecu-build-${{ matrix.module_executable.module }}
+  #         path: ecu_simulation/${{ matrix.module_executable.module }}/
+  
+
+  # build_mcu:
+  #   runs-on: self-hosted
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Cache APT Dependencies
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: /var/cache/apt
+  #         key: ${{ runner.os }}-apt-cache
+  #         restore-keys: |
+  #           ${{ runner.os }}-apt-cache
+
+  #     - name: Build MCU
+  #       run: |
+  #         cd mcu
+  #         make -j$(nproc)
+
+  #     - name: Upload MCU Build Artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: mcu-build
+  #         path: mcu/
+
+  #     - name: Upload config.ini Artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: config-ini
+  #         path: config/config.ini
+
+
+  run_tests:
+    runs-on: self-hosted
+    # needs: [build_mcu, build_ecu]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # - name: Download MCU Build Artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: mcu-build
+      #     path: mcu/
+
+      # - name: Download ECU Build Artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: ecu-build-BatteryModule
+      #     path: ecu_simulation/BatteryModule/
+
+      # - name: Download ECU Build Artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: ecu-build-HVACModule
+      #     path: ecu_simulation/HVACModule/
+
+      # - name: Download ECU Build Artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: ecu-build-DoorsModule
+      #     path: ecu_simulation/DoorsModule/
+
+      # - name: Download ECU Build Artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: ecu-build-EngineModule
+      #     path: ecu_simulation/EngineModule/
+
+      # - name: Download config.ini Artifact
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: config-ini
+      #     path: config/
+  
+      - name: Run Tests
+        run: |
+          cd mcu/
+          timeout 60s make -j$(nproc) cleanAllTests
+          timeout 60s make -j$(nproc) runAllTests
