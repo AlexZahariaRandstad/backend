@@ -19,6 +19,10 @@
 #include "CaptureFrame.h"
 #include "Globals.h"
 #include "../../uds/authentication/include/SecurityAccess.h"
+#include <fstream>
+#include <filesystem>
+#include <map>
+#include <stdexcept>
 
 /**
  * @brief Check if a line is inside of an output
@@ -50,6 +54,22 @@ void testFrames(struct can_frame expected_frame, struct can_frame captured_frame
 void testFrames(struct can_frame expected_frame, CaptureFrame captured_frame);
 
 /**
+ * @brief Print a frame's attributes used in equality checking (can_id, can_dlc, data)
+ * @warning Debug use only, not intended to appear in unit tests' final version
+ * @param frameName A name associated with the frame, useful for differentiating among multiple frames(e.g. "expected frame", "actual frame")
+ * @param frame The frame to be printed
+ */
+void v_PrintDebugFrame(std::string frameName, struct can_frame frame);
+
+/**
+ * @brief Print a frame's attributes used in equality checking (can_id, can_dlc, data)
+ * @warning Debug use only, not intended to appear in unit tests' final version
+ * @param frameName A name associated with the frame, useful for differentiating among multiple frames(e.g. "expected frame", "actual frame")
+ * @param frame The frame to be printed
+ */
+void v_PrintDebugFrame(std::string frameName, CaptureFrame frame);
+
+/**
  * @brief Create a Frame object
  * 
  * @param id if of the frame
@@ -79,4 +99,20 @@ int createSocket(uint8_t interface_number);
  * @param sid the id of the service for which we request access
  */
 void v_requestSecurityAccess(std::shared_ptr<SecurityAccess> spSecurityAccess, std::shared_ptr<CaptureFrame> spCapturedFrame, uint8_t sid);
+
+/**
+ * @brief Create a dummy DTC file
+ *
+ * @param strFilePath The path where the dummy DTC file will be created
+ * @param mapStrVecU16_DtcValues A map containing DTC codes
+ */
+void v_CreateDummyDtcFile(const std::string& strFilePath, const std::map<std::string, std::vector<uint16_t>>& mapStrVecU16_DtcValues);
+
+/**
+ * @brief Create a dummy ZIP file
+ *
+ * @param strFilePath The path where the dummy ZIP file will be created
+ */
+void v_CreateDummyZipFile(const std::string& strFilePath);
+
 #endif

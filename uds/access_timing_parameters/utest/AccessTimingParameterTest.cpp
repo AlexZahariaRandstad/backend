@@ -42,7 +42,7 @@ struct AccessTimingParameterTest : testing::Test
 TEST_F(AccessTimingParameterTest, ReadExtendedTimingParameter) {
     std::cerr << "Running ReadExtendedTimingParameter" << std::endl;
     
-    struct can_frame result_frame = createFrame(0x10FA, {0x06, 0xC3, 0x01, 0x00, 0x28, 0x01, 0x90});
+    struct can_frame result_frame = createFrame(0x10FA, {0x06, 0xC3, 0x01, 0x07, 0xD0, 0x4E, 0x20});
 
     atp->handleRequest(0xFA10, 0x01, {});
     c1->capture();
@@ -54,7 +54,7 @@ TEST_F(AccessTimingParameterTest, ReadExtendedTimingParameter) {
 TEST_F(AccessTimingParameterTest, ReadCurrentlyActiveTimingParameter) {
     std::cerr << "Running ReadCurrentlyActiveTimingParameter" << std::endl;
     
-    struct can_frame result_frame = createFrame(0x10FA, {0x06, 0xC3, 0x03, 0x00, 0x28, 0x01, 0x90});
+    struct can_frame result_frame = createFrame(0x10FA, {0x06, 0xC3, 0x03, 0x07, 0xD0, 0x4E, 0x20});
 
     atp->handleRequest(0xFA10, 0x03, {});
     c1->capture();

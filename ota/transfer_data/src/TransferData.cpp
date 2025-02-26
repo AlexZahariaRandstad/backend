@@ -97,7 +97,7 @@ void TransferData::processDataForTransfer(canid_t can_id, std::vector<uint8_t>& 
         LOG_INFO(logger.GET_LOGGER(), "Data processing for transfer started.");
         return;
     }
-    
+
     size_t current_chunk_size = std::min(static_cast<size_t>(chunk_size), total_size - bytes_sent);
     if (bytes_sent >= total_size && bytes_sent != 0)
     {   

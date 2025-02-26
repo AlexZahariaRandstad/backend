@@ -89,6 +89,17 @@ public:
      * @return RDSData 
      */
     static RDSData getRdsData();
+
+    /**
+     * @brief Setter method to update the data format in RDSData.
+     * 
+     * @note This method is intended for test purposes only and should be removed
+     *       once the code is refactored to better support dependency injection.
+     *       Follow-up tickets should be created for tracking the refactor.
+     * @param u8Format The new data format (e.g., 0x00 for ELF, 0x10 for ZIP).
+     */
+    static void vSetRdsDataFormat(uint8_t u8Format);
+
 private:
 /*********************************************************************/
 /************************* PRIVATE VARIABLES *************************/

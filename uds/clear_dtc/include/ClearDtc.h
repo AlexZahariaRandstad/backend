@@ -43,6 +43,13 @@ class ClearDtc
          */
         void clearDtc(int id, std::vector<uint8_t> data);
 
+        /**
+         * @brief Retrieves the path to the DTC storage file.
+         *
+         * @return std::string The file path where DTC data is stored.
+         */
+        std::string str_GetPathToDTC() const;
+
     private:
         /**
          * @brief Method for extract groupDTC base on the DTC

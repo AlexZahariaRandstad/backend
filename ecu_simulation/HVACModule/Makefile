@@ -239,3 +239,4 @@ clean:
 	find ./test -name '*.info' -delete
 	find ./test -name '*.out' -delete
 	find ./test -name '*.o' -delete
+	find . -type f \( -name "*data*" -o -iname "*dtc*" \) -delete

@@ -66,8 +66,7 @@ OBJ_DIR = obj
 HVAC_DIR_TEST = ../ecu_simulation/HVACModule/test
 
 # Build config
-all:
-	$(MAKE) -C ../config init
+all: allPreProcess
 
 #----------------------------------------------------MCU MODULE-----------------------------------------------------
 
@@ -97,6 +96,7 @@ UTILS_OBJS = $(OBJ_DIR)/MemoryManager.o \
 			 $(OBJ_DIR)/ECU_ReceiveFrames.o \
 			 $(OBJ_DIR)/HandleFrames.o \
 			 $(OBJ_DIR)/FileManager.o \
+			 $(OBJ_DIR)/FileGuard.o \
 			 $(OBJ_DIR)/ECU.o \
 			 $(OBJ_DIR)/Globals.o
 
@@ -219,6 +219,9 @@ $(OBJ_DIR)/MemoryManager.o: $(UTILS_DIR)/MemoryManager.cpp
 $(OBJ_DIR)/FileManager.o: $(UTILS_DIR)/FileManager.cpp
 	$(CXX) $(CFLAGS) -c $(UTILS_DIR)/FileManager.cpp -o $(OBJ_DIR)/FileManager.o
 
+$(OBJ_DIR)/FileGuard.o: $(UTILS_DIR)/FileGuard.cpp
+	$(CXX) $(CFLAGS) -c $(UTILS_DIR)/FileGuard.cpp -o $(OBJ_DIR)/FileGuard.o
+
 $(OBJ_DIR)/TransferData.o: $(OTA_DIR)/transfer_data/src/TransferData.cpp
 	$(CXX) $(CFLAGS) -c $(OTA_DIR)/transfer_data/src/TransferData.cpp -o $(OBJ_DIR)/TransferData.o
 
@@ -261,12 +264,14 @@ UTILS_OBJS_TEST = $(OBJ_DIR)/MemoryManager_test.o \
 				  $(OBJ_DIR)/ReceiveFrames_test_utils.o \
 				  $(OBJ_DIR)/ECU_test.o \
                   $(OBJ_DIR)/FileManager_test.o \
+				  $(OBJ_DIR)/FileGuard_test.o \
 				  $(OBJ_DIR)/CaptureFrame_test.o
 
 OBJS_GENERATE_TEST = $(OBJ_DIR)/Logger_test.o \
                   	 $(OBJ_DIR)/GenerateFrames_test.o \
 					 $(OBJ_DIR)/NegativeResponse_test.o \
 					 $(OBJ_DIR)/SecurityAccess_test.o \
+					 $(OBJ_DIR)/FileManager_test.o \
 					 $(OBJ_DIR)/Globals_test.o \
 					 $(OBJ_DIR)/TestUtils_test.o \
 					 $(OBJ_DIR)/CaptureFrame_test.o
@@ -304,7 +309,8 @@ OBJS_SECURITYACCESS_TEST = $(OBJ_DIR)/Logger_test.o \
 			   			   $(OBJ_DIR)/NegativeResponse_test.o \
 						   $(OBJ_DIR)/Globals_test.o \
 						   $(OBJ_DIR)/TestUtils_test.o \
-						   $(OBJ_DIR)/CaptureFrame_test.o
+						   $(OBJ_DIR)/CaptureFrame_test.o \
+						   $(OBJ_DIR)/FileManager_test.o \
 
 OBJS_TESTERPRESENT_TEST = $(OBJ_DIR)/Logger_test.o \
 						  $(OBJ_DIR)/GenerateFrames_test.o \
@@ -362,6 +368,7 @@ OBJS_TRANSFERDATA_TEST = $(OBJ_DIR)/Logger_test.o \
 
 OBJS_NEGATIVERESPONSE_TEST = $(OBJ_DIR)/Logger_test.o \
                              $(OBJ_DIR)/GenerateFrames_test.o \
+							 $(OBJ_DIR)/FileManager_test.o \
                              $(OBJ_DIR)/NegativeResponse_test.o \
 							 $(OBJ_DIR)/SecurityAccess_test.o \
 							 $(OBJ_DIR)/Globals_test.o \
@@ -441,6 +448,9 @@ $(OBJ_DIR)/ReceiveFrames_test_utils.o: $(UTILS_DIR)/ReceiveFrames.cpp
 $(OBJ_DIR)/FileManager_test.o: $(UTILS_DIR)/FileManager.cpp
 	$(CXX) $(CFLAGS) $(CFLAGSTST) -c $(UTILS_DIR)/FileManager.cpp -o $(OBJ_DIR)/FileManager_test.o $(CFLAGSTST2) $(LDFLAGS)
 
+$(OBJ_DIR)/FileGuard_test.o: $(UTILS_DIR)/FileGuard.cpp
+	$(CXX) $(CFLAGS) $(CFLAGSTST) -c $(UTILS_DIR)/FileGuard.cpp -o $(OBJ_DIR)/FileGuard_test.o $(CFLAGSTST2) $(LDFLAGS)
+
 $(OBJ_DIR)/ReadDtcInformation_test.o: $(UDS_DIR)/read_dtc_information/src/ReadDtcInformation.cpp
 	$(CXX) $(CFLAGS) $(CFLAGSTST) -c $(UDS_DIR)/read_dtc_information/src/ReadDtcInformation.cpp -o $(OBJ_DIR)/ReadDtcInformation_test.o $(CFLAGSTST2) $(LDFLAGS)
 
@@ -486,13 +496,7 @@ allTests: mcuModuleTest batteryModuleTest engineModuleTest doorsModuleTest hvacM
 		  accessTimingParameterTest receiveFramesTestUtils ecuTest readMemoryByAddressTest
 
 # Compile and Run all unit tests
-runAllTests: runMcuModuleTest runBatteryModuleTest runEngineModuleTest runDoorsModuleTest runHvacModuleTest \
-             runHandleFramesTest runReceiveFramesTest runGenerateFramesTest runLoggerTest runMemoryManagerTest \
-             runCreateInterfaceTest runDiagnosticSessionControlTest runWriteDataByIdentifierTest \
-             runReadDataByIdentifierTest runRequestTransferExitTest runReadDtcTest runClearDtcTest \
-             runRequestUpdateStatusTest runSecurityAccessTest runTesterPresentTest runRoutineControlTest \
-             runTransferDataTest runRequestDownloadTest runEcuResetTest runNegativeResponseTest \
-             runAccessTimingParameterTest runReceiveFramesTestUtils runEcuTest runReadMemoryByAddressTest
+runAllTests: runUdsTests
 
 # Clean all unit tests
 cleanAllTests: cleanMcuModuleTest cleanBatteryModuleTest cleanEngineModuleTest cleanDoorsModuleTest cleanHvacModuleTest \
@@ -503,11 +507,22 @@ cleanAllTests: cleanMcuModuleTest cleanBatteryModuleTest cleanEngineModuleTest c
                cleanNegativeResponseTest cleanAccessTimingParameterTest cleanReceiveFramesTestUtils cleanEcuTest cleanReadMemoryByAddressTest \
                clean
 
+# Compile and Run all UDS unit tests
+runUdsTests: runSecurityAccessTest runAccessTimingParameterTest runClearDtcTest \
+	runDiagnosticSessionControlTest runEcuResetTest runReadDataByIdentifierTest runReadDtcTest \
+	runRoutineControlTest runTesterPresentTest runWriteDataByIdentifierTest
+
+# Clean all UDS unit tests
+cleanUdsTests: cleanSecurityAccessTest cleanAccessTimingParameterTest cleanClearDtcTest \
+	cleanDiagnosticSessionControlTest cleanEcuResetTest cleanReadDataByIdentifierTest \
+	cleanReadDtcTest cleanRoutineControlTest cleanTesterPresentTest cleanWriteDataByIdentifierTest \
+	clean
 
 # HandleFrames Unit tests
 runHandleFramesTest: handleFramesTest
 	$(UTILS_TEST)/handleFramesTest.out
 
+handleFramesTest: allPreProcess
 handleFramesTest: $(OBJ_DIR) $(UTILS_TEST)/handleFramesTest.out
 
 $(UTILS_TEST)/handleFramesTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UTILS_TEST)/HandleFrames_test.o
@@ -523,6 +538,7 @@ cleanHandleFramesTest:
 	rm -rf $(UTILS_TEST)/*.gcda
 
 # FileManager Unit tests
+fileManagerTest: allPreProcess
 fileManagerTest: $(OBJ_DIR) $(UTILS_TEST)/fileManagerTest.out
 
 $(UTILS_TEST)/fileManagerTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UTILS_TEST)/FileManager_test.o
@@ -535,6 +551,7 @@ $(UTILS_TEST)/FileManager_test.o: $(UTILS_TEST)/FileManagerTest.cpp
 runEcuTest: ecuTest
 	$(UTILS_TEST)/ecuTest.out
 
+ecuTest: allPreProcess
 ecuTest: $(OBJ_DIR) $(UTILS_TEST)/ecuTest.out
 
 $(UTILS_TEST)/ecuTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UTILS_TEST)/ECU_test.o
@@ -553,6 +570,7 @@ cleanEcuTest:
 runReceiveFramesTestUtils: receiveFramesTestUtils
 	$(UTILS_TEST)/receiveFramesTestUtils.out
 
+receiveFramesTestUtils: allPreProcess
 receiveFramesTestUtils: $(OBJ_DIR) $(UTILS_TEST)/receiveFramesTestUtils.out
 
 $(UTILS_TEST)/receiveFramesTestUtils.out: $(OBJ_DIR) $(OBJS_TEST) $(UTILS_TEST)/ReceiveFrames_test_utils.o
@@ -572,6 +590,7 @@ cleanReceiveFramesTestUtils:
 runReceiveFramesTest: receiveFramesTest
 	$(SRC_TEST)/receiveFramesTest.out
 
+receiveFramesTest: allPreProcess
 receiveFramesTest: $(OBJ_DIR) $(SRC_TEST)/receiveFramesTest.out
 
 $(SRC_TEST)/receiveFramesTest.out: $(OBJ_DIR) $(OBJS_TEST) $(SRC_TEST)/ReceiveFrames_test.o
@@ -591,6 +610,7 @@ cleanReceiveFramesTest:
 runMcuModuleTest: mcuModuleTest
 	$(SRC_TEST)/mcuModuleTest.out
 
+mcuModuleTest: allPreProcess
 mcuModuleTest: $(OBJ_DIR) $(SRC_TEST)/mcuModuleTest.out
 
 $(SRC_TEST)/mcuModuleTest.out: $(OBJ_DIR) $(OBJS_TEST) $(SRC_TEST)/MCUModule_test.o
@@ -610,6 +630,7 @@ cleanMcuModuleTest:
 runGenerateFramesTest: generateFramesTest
 	$(UTILS_TEST)/generateFramesTest.out
 
+generateFramesTest: allPreProcess
 generateFramesTest: $(OBJ_DIR) $(UTILS_TEST)/generateFramesTest.out
 
 $(UTILS_TEST)/generateFramesTest.out: $(OBJ_DIR) $(OBJS_GENERATE_TEST) $(UTILS_TEST)/GenerateFrames_test.o
@@ -629,6 +650,7 @@ cleanGenerateFramesTest:
 runLoggerTest: loggerTest
 	$(UTILS_TEST)/loggerTest.out
 
+loggerTest: allPreProcess
 loggerTest: $(OBJ_DIR) $(UTILS_TEST)/loggerTest.out
 
 $(UTILS_TEST)/loggerTest.out: $(OBJ_DIR) $(OBJS_LOGGER_TEST) $(UTILS_TEST)/Logger_test.o
@@ -648,6 +670,7 @@ cleanLoggerTest:
 runMemoryManagerTest: memoryManagerTest
 	$(UTILS_TEST)/memoryManagerTest.out
 
+memoryManagerTest: allPreProcess
 memoryManagerTest: $(OBJ_DIR) $(UTILS_TEST)/memoryManagerTest.out
 
 $(UTILS_TEST)/memoryManagerTest.out: $(OBJ_DIR) $(OBJS_MEMORY_TEST) $(UTILS_TEST)/MemoryManager_test.o
@@ -667,6 +690,7 @@ cleanMemoryManagerTest:
 runCreateInterfaceTest: createInterfaceTest
 	$(UTILS_TEST)/createInterfaceTest.out
 
+createInterfaceTest: allPreProcess
 createInterfaceTest: $(OBJ_DIR) $(UTILS_TEST)/createInterfaceTest.out
 
 $(UTILS_TEST)/createInterfaceTest.out: $(OBJ_DIR) $(OBJS_CREATEINTERFACE_TEST) $(UTILS_TEST)/CreateInterface_test.o
@@ -683,9 +707,11 @@ cleanCreateInterfaceTest:
 
 
 # DiagnosticSessionControl Unit tests
+runDiagnosticSessionControlTest: allPreProcess
 runDiagnosticSessionControlTest: diagnosticSessionControlTest
 	$(UDS_DIR)/diagnostic_session_control/utest/diagnosticSessionControlTest.out
 
+diagnosticSessionControlTest: allPreProcess
 diagnosticSessionControlTest: $(OBJ_DIR) $(UDS_DIR)/diagnostic_session_control/utest/diagnosticSessionControlTest.out
 
 $(UDS_DIR)/diagnostic_session_control/utest/diagnosticSessionControlTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UDS_DIR)/diagnostic_session_control/utest/DiagnosticSessionControl_test.o
@@ -705,6 +731,7 @@ cleanDiagnosticSessionControlTest:
 runReadMemoryByAddressTest: readMemoryByAddressTest
 	$(UDS_DIR)/read_memory_by_address/utest/readMemoryByAddressTest.out
 
+readMemoryByAddressTest: allPreProcess
 readMemoryByAddressTest: $(OBJ_DIR) $(UDS_DIR)/read_memory_by_address/utest/readMemoryByAddressTest.out
 
 $(UDS_DIR)/read_memory_by_address/utest/readMemoryByAddressTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UDS_DIR)/read_memory_by_address/utest/ReadMemoryByAddress_test.o
@@ -721,9 +748,11 @@ cleanReadMemoryByAddressTest:
 
 
 # WriteDataByIdentifier Unit tests
+runWriteDataByIdentifierTest: allPreProcess
 runWriteDataByIdentifierTest: writeDataByIdentifierTest
 	$(UDS_DIR)/write_data_by_identifier/utest/writeDataByIdentifierTest.out
 
+writeDataByIdentifierTest: allPreProcess
 writeDataByIdentifierTest: $(OBJ_DIR) $(UDS_DIR)/write_data_by_identifier/utest/writeDataByIdentifierTest.out
 
 $(UDS_DIR)/write_data_by_identifier/utest/writeDataByIdentifierTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UDS_DIR)/write_data_by_identifier/utest/WriteDataByIdentifier_test.o
@@ -740,9 +769,11 @@ cleanWriteDataByIdentifierTest:
 
 
 # ReadDataByIdentifier Unit tests
+runReadDataByIdentifierTest: allPreProcess
 runReadDataByIdentifierTest: readDataByIdentifierTest
 	$(UDS_DIR)/read_data_by_identifier/utest/readDataByIdentifierTest.out
 
+readDataByIdentifierTest: allPreProcess
 readDataByIdentifierTest: $(OBJ_DIR) $(UDS_DIR)/read_data_by_identifier/utest/readDataByIdentifierTest.out
 
 $(UDS_DIR)/read_data_by_identifier/utest/readDataByIdentifierTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UDS_DIR)/read_data_by_identifier/utest/ReadDataByIdentifier_test.o
@@ -762,6 +793,7 @@ cleanReadDataByIdentifierTest:
 runRequestTransferExitTest: requestTransferExitTest
 	$(OTA_DIR)/request_transfer_exit/utest/requestTransferExitTest.out
 
+requestTransferExitTest: allPreProcess
 requestTransferExitTest: $(OBJ_DIR) $(OTA_DIR)/request_transfer_exit/utest/requestTransferExitTest.out
 
 $(OTA_DIR)/request_transfer_exit/utest/requestTransferExitTest.out: $(OBJ_DIR) $(OBJS_TEST) $(OTA_DIR)/request_transfer_exit/utest/RequestTransferExit_test.o
@@ -778,9 +810,11 @@ cleanRequestTransferExitTest:
 
 
 # ReadDTC Unit tests
+runReadDtcTest: allPreProcess
 runReadDtcTest: readDtcTest
 	$(UDS_DIR)/read_dtc_information/utest/readDtcTest.out
 
+readDtcTest: allPreProcess
 readDtcTest: $(OBJ_DIR) $(UDS_DIR)/read_dtc_information/utest/readDtcTest.out
 
 $(UDS_DIR)/read_dtc_information/utest/readDtcTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UDS_DIR)/read_dtc_information/utest/ReadDtcInformation_test.o
@@ -797,9 +831,11 @@ cleanReadDtcTest:
 
 
 # ClearDTC Unit tests
+runClearDtcTest: allPreProcess
 runClearDtcTest: clearDtcTest
 	$(UDS_DIR)/clear_dtc/utest/clearDtcTest.out
 
+clearDtcTest: allPreProcess
 clearDtcTest: $(OBJ_DIR) $(UDS_DIR)/clear_dtc/utest/clearDtcTest.out
 
 $(UDS_DIR)/clear_dtc/utest/clearDtcTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UDS_DIR)/clear_dtc/utest/ClearDtc_test.o
@@ -819,6 +855,7 @@ cleanClearDtcTest:
 runRequestUpdateStatusTest: requestUpdateStatusTest
 	$(OTA_DIR)/request_update_status/utest/requestUpdateStatusTest.out
 
+requestUpdateStatusTest: allPreProcess
 requestUpdateStatusTest: $(OBJ_DIR) $(OTA_DIR)/request_update_status/utest/requestUpdateStatusTest.out
 
 $(OTA_DIR)/request_update_status/utest/requestUpdateStatusTest.out: $(OBJ_DIR) $(OBJS_TEST) $(OTA_DIR)/request_update_status/utest/RequestUpdateStatus_test.o
@@ -835,9 +872,11 @@ cleanRequestUpdateStatusTest:
 
 
 # SecurityAccess Unit tests
+runSecurityAccessTest: allPreProcess
 runSecurityAccessTest: securityAccessTest
 	$(UDS_DIR)/authentication/utest/securityAccessTest.out
 
+securityAccessTest: allPreProcess
 securityAccessTest: $(OBJ_DIR) $(UDS_DIR)/authentication/utest/securityAccessTest.out
 
 $(UDS_DIR)/authentication/utest/securityAccessTest.out: $(OBJ_DIR) $(OBJS_SECURITYACCESS_TEST) $(UDS_DIR)/authentication/utest/SecurityAccess_test.o
@@ -854,9 +893,11 @@ cleanSecurityAccessTest:
 
 
 # TesterPresent Unit tests
+runTesterPresentTest: allPreProcess
 runTesterPresentTest: testerPresentTest
 	$(UDS_DIR)/tester_present/utest/testerPresentTest.out
 
+testerPresentTest: allPreProcess
 testerPresentTest: $(OBJ_DIR) $(UDS_DIR)/tester_present/utest/testerPresentTest.out
 
 $(UDS_DIR)/tester_present/utest/testerPresentTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UDS_DIR)/tester_present/utest/TesterPresent_test.o
@@ -873,9 +914,11 @@ cleanTesterPresentTest:
 
 
 # RoutineControl Unit tests
+runRoutineControlTest: allPreProcess
 runRoutineControlTest: routineControlTest
 	$(UDS_DIR)/routine_control/utest/routineControlTest.out
 
+routineControlTest: allPreProcess
 routineControlTest: $(OBJ_DIR) $(UDS_DIR)/routine_control/utest/routineControlTest.out
 
 $(UDS_DIR)/routine_control/utest/routineControlTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UDS_DIR)/routine_control/utest/RoutineControl_test.o
@@ -892,9 +935,11 @@ cleanRoutineControlTest:
 
 
 # EcuReset Unit tests
+runEcuResetTest: allPreProcess
 runEcuResetTest: ecuResetTest
 	$(UDS_DIR)/ecu_reset/utest/ecuResetTest.out
 
+ecuResetTest: allPreProcess
 ecuResetTest: $(OBJ_DIR) $(UDS_DIR)/ecu_reset/utest/ecuResetTest.out
 
 $(UDS_DIR)/ecu_reset/utest/ecuResetTest.out: $(OBJ_DIR) $(OBJS_TEST) $(UDS_DIR)/ecu_reset/utest/EcuReset_test.o
@@ -914,6 +959,7 @@ cleanEcuResetTest:
 runDoorsModuleTest: doorsModuleTest
 	$(DOORS_DIR_TEST)/doorsModuleTest.out
 
+doorsModuleTest: allPreProcess
 doorsModuleTest: $(OBJ_DIR) $(DOORS_DIR_TEST)/doorsModuleTest.out
 
 $(DOORS_DIR_TEST)/doorsModuleTest.out: $(OBJ_DIR) $(DOORS_DIR_TEST)/doorsModule_test.o $(OBJS_TEST)
@@ -933,6 +979,7 @@ cleanDoorsModuleTest:
 runRequestDownloadTest: requestDownloadTest
 	$(OTA_DIR)/request_download/utest/requestDownloadTest.out
 
+requestDownloadTest: allPreProcess
 requestDownloadTest: $(OBJ_DIR) $(OTA_DIR)/request_download/utest/requestDownloadTest.out
 
 $(OTA_DIR)/request_download/utest/requestDownloadTest.out: $(OBJ_DIR) $(OBJS_TEST) $(OTA_DIR)/request_download/utest/RequestDownload_test.o
@@ -952,6 +999,7 @@ cleanRequestDownloadTest:
 runTransferDataTest: transferDataTest
 	$(OTA_DIR)/transfer_data/utest/transferDataTest.out
 
+transferDataTest: allPreProcess
 transferDataTest: $(OBJ_DIR) $(OTA_DIR)/transfer_data/utest/transferDataTest.out
 
 $(OTA_DIR)/transfer_data/utest/transferDataTest.out: $(OBJ_DIR) $(OBJS_TEST) $(OTA_DIR)/transfer_data/utest/TransferData_test.o
@@ -971,6 +1019,7 @@ cleanTransferDataTest:
 runHvacModuleTest: hvacModuleTest
 	$(HVAC_DIR_TEST)/hvacModuleTest.out
 
+hvacModuleTest: allPreProcess
 hvacModuleTest: $(OBJ_DIR) $(HVAC_DIR_TEST)/hvacModuleTest.out
 
 $(HVAC_DIR_TEST)/hvacModuleTest.out: $(OBJ_DIR) $(HVAC_DIR_TEST)/hvacModule_test.o $(OBJS_TEST)
@@ -987,9 +1036,11 @@ cleanHvacModuleTest:
 
 
 # AccessTimingParameter Unit tests
+runAccessTimingParameterTest: allPreProcess
 runAccessTimingParameterTest: accessTimingParameterTest
 	$(UDS_DIR)/access_timing_parameters/utest/accessTimingParameterTest.out
 
+accessTimingParameterTest: allPreProcess
 accessTimingParameterTest: $(OBJ_DIR) $(UDS_DIR)/access_timing_parameters/utest/accessTimingParameterTest.out
 
 $(UDS_DIR)/access_timing_parameters/utest/accessTimingParameterTest.out: $(UDS_DIR) $(OBJS_TEST) $(UDS_DIR)/access_timing_parameters/utest/AccessTimingParameter_test.o
@@ -1009,6 +1060,7 @@ cleanAccessTimingParameterTest:
 runEngineModuleTest: engineModuleTest
 	$(ENGINE_DIR_TEST)/engineModuleTest.out
 
+engineModuleTest: allPreProcess
 engineModuleTest: $(OBJ_DIR) $(ENGINE_DIR_TEST)/engineModuleTest.out
 
 $(ENGINE_DIR_TEST)/engineModuleTest.out: $(OBJ_DIR) $(ENGINE_DIR_TEST)/engineModule_test.o $(OBJS_TEST)
@@ -1028,6 +1080,7 @@ cleanEngineModuleTest:
 runNegativeResponseTest: negativeResponseTest
 	$(UTILS_TEST)/negativeResponseTest.out
 
+negativeResponseTest: allPreProcess
 negativeResponseTest: $(OBJ_DIR) $(UTILS_TEST)/negativeResponseTest.out
 
 $(UTILS_TEST)/negativeResponseTest.out: $(OBJ_DIR) $(OBJS_NEGATIVERESPONSE_TEST) $(UTILS_TEST)/NegativeResponse_test.o
@@ -1047,6 +1100,7 @@ cleanNegativeResponseTest:
 runBatteryModuleTest: batteryModuleTest
 	$(BATTERY_DIR_TEST)/batteryModuleTest.out
 
+batteryModuleTest: allPreProcess
 batteryModuleTest: $(OBJ_DIR) $(BATTERY_DIR_TEST)/batteryModuleTest.out
 
 $(BATTERY_DIR_TEST)/batteryModuleTest.out: $(OBJ_DIR) $(BATTERY_DIR_TEST)/batteryModule_test.o $(OBJS_TEST)
@@ -1552,6 +1606,10 @@ allCoveragePostProcess:
 
 allCoverage: allCoveragePostProcess
 
+# Preprocess target
+allPreProcess:
+	$(MAKE) -C ../config init
+
 #----------------------------------------------------Clean up--------------------------------------------------------
 
 BASE_DIR_1 := ../uds
@@ -1597,22 +1655,5 @@ clean:
 	@echo "Cleaning up..."
 	rm -f $(FINAL)
 	rm -rf $(OBJ_DIR)
-	@for dir in $(UTEST_DIRS); do \
-		if [ -d $$dir ]; then \
-			find $$dir -name "*$(FILE_EXT_out)" -type f -exec rm -f {} +; \
-			echo "Removed *$(FILE_EXT_out) files from $$dir"; \
-			find $$dir -name "*$(FILE_EXT_o)" -type f -exec rm -f {} +; \
-			echo "Removed *$(FILE_EXT_o) files from $$dir"; \
-			find $$dir -name '*.gcno' -delete; \
-			find $$dir -name '*.gcda' -delete; \
-			find $$dir -name '*.gcov' -delete; \
-			find $$dir -name '*.info' -delete; \
-		fi \
-	done
-	find .. -name '*.gcno' -delete
-	find .. -name '*.gcda' -delete
-	find .. -name '*.gcov' -delete
-	find .. -name '*.info' -delete
-	find .. -name '*.out' -delete
-	find .. -name '*.o' -delete
 	if [ -d "./coverage" ]; then find ./coverage -name '*' -delete; fi
+	find . -type f \( -name "*data*" -o -iname "*dtc*" \) -delete

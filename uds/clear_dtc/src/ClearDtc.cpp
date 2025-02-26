@@ -97,6 +97,10 @@ void ClearDtc::clearDtc(int id, std::vector<uint8_t> data)
     AccessTimingParameter::stopTimingFlag(lowerbits, 0x14);
 }
 
+std::string ClearDtc::str_GetPathToDTC() const
+{
+    return path_to_dtc;
+}
 
 uint32_t ClearDtc::extractGroup(std::string dtc)
 {
